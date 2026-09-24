@@ -1,6 +1,6 @@
 import {createContext,useContext,useEffect,useState} from "react";
 import type {Session,User} from "@supabase/supabase-js";import {supabase} from "../services/supabase";
-type Role="employee"|"manager"|"ceo"|"admin";
+export type Role="employee"|"manager"|"ceo"|"admin";
 type AuthContextValue={session:Session|null;user:User|null;role:Role|null;organizationId:string|null;loading:boolean;signIn:(email:string,password:string)=>Promise<void>;signOut:()=>Promise<void>};
 const AuthContext=createContext<AuthContextValue|undefined>(undefined);
 export function AuthProvider({children}:{children:React.ReactNode}){const[session,setSession]=useState<Session|null>(null);const[role,setRole]=useState<Role|null>(null);const[organizationId,setOrganizationId]=useState<string|null>(null);const[loading,setLoading]=useState(true);
