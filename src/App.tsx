@@ -7,10 +7,11 @@ import { Commitments } from "./screens/Commitments";
 import { Review } from "./screens/Review";
 import { Trends } from "./screens/Trends";
 import { Reports } from "./screens/Reports";
+import { Scorecard } from "./screens/Scorecard";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { Login } from "./screens/Login";
 
-type Page = "dashboard" | "baseline" | "commitments" | "weekly" | "review" | "trends" | "reports";
+type Page = "dashboard" | "baseline" | "commitments" | "weekly" | "review" | "trends" | "reports" | "scorecard";
 
 function Workspace() {
   const { user, loading, signOut } = useAuth();
@@ -21,7 +22,7 @@ function Workspace() {
 
   const content = page === "dashboard" ? <Dashboard onNavigate={setPage} /> :
     page === "baseline" ? <Assessment type="baseline" /> :
-    page === "weekly" ? <Assessment type="weekly" /> :
+    page === "weekly" ? <Scorecard /> :
     page === "commitments" ? <Commitments /> :
     page === "review" ? <Review /> :
     page === "trends" ? <Trends /> : <Reports />;
