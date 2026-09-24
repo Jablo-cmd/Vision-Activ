@@ -13,27 +13,25 @@ export function Login() {
     event.preventDefault();
     setBusy(true);
     setError("");
-    try {
-      await signIn(email, password);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to sign in.");
-    } finally {
-      setBusy(false);
-    }
+    try { await signIn(email, password); }
+    catch (err) { setError(err instanceof Error ? err.message : "Unable to sign in."); }
+    finally { setBusy(false); }
   };
 
-  return <div className="flex min-h-screen items-center justify-center bg-[#071a35] p-5">
-    <Card className="w-full max-w-md p-8">
+  return <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#172B4D] p-5">
+    <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-[#0072CE]/20 blur-3xl" />
+    <div className="absolute -bottom-40 -left-24 h-96 w-96 rounded-full bg-[#2FA7E0]/20 blur-3xl" />
+    <Card className="relative w-full max-w-md border-white/60 p-8 shadow-2xl">
       <div className="mb-8">
-        <div className="text-xs font-bold uppercase tracking-[0.25em] text-orange-500">Vision Activ</div>
-        <h1 className="mt-2 text-3xl font-bold text-[#071a35]">Performance Workspace</h1>
-        <p className="mt-2 text-sm text-slate-500">Assess. Commit. Track. Review. Improve.</p>
+        <div className="text-xs font-bold uppercase tracking-[0.25em] text-[#F58220]">Vision Activ</div>
+        <h1 className="mt-2 text-3xl font-bold text-[#172B4D]">Performance Workspace</h1>
+        <p className="mt-2 text-sm text-[#667085]">Assess. Commit. Track. Review. Improve.</p>
       </div>
       <form onSubmit={submit} className="space-y-4">
-        <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Work email" className="w-full rounded-xl border border-slate-200 px-4 py-3" />
-        <input required type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="w-full rounded-xl border border-slate-200 px-4 py-3" />
+        <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Work email" className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#0072CE] focus:ring-2 focus:ring-[#0072CE]/10" />
+        <input required type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-[#0072CE] focus:ring-2 focus:ring-[#0072CE]/10" />
         {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-        <Button disabled={busy} className="w-full bg-orange-500 text-white">{busy ? "Signing in…" : "Sign in"}</Button>
+        <Button disabled={busy} className="w-full bg-[#F58220] text-white hover:bg-[#D96D12]">{busy ? "Signing in…" : "Sign in"}</Button>
       </form>
     </Card>
   </div>;
