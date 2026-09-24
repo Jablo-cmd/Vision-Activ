@@ -1,27 +1,36 @@
 # Vision Activ High-Performance Operating Framework
 
-Enterprise web application for assessments, commitments, weekly scorecards, management reviews, trend analysis and quarterly consolidation.
+Enterprise web application for the operating cycle: **Assess → Commit → Track → Review → Improve**.
 
 ## Stack
 React 18, TypeScript, Vite, Tailwind CSS v4, Recharts and Supabase.
 
-## Framework content
-The 12 dimensions are database-configured because the proprietary Vision Activ framework definitions were not included in the build brief. Neutral placeholders are seeded. Before production rollout, replace them with the approved names, descriptions and weights supplied by Vision Activ.
+## Core workflows
+- Baseline assessment across 12 configurable dimensions with 1–5 scoring and evidence.
+- Personal Improvement Commitment Charter (PICC).
+- Weekly scorecards with measurable evidence.
+- Role-protected 20-minute management reviews.
+- Individual trend analysis.
+- Quarterly leadership consolidation and export.
+
+## Security
+Supabase Row Level Security is enabled on application tables. Employees can manage their own assessment, commitment and scorecard records; management functions are role protected. Audit events record key workspace activity.
 
 ## Environment
-Create .env.local with VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY. Never expose a service-role or secret key in frontend code.
+Copy .env.example to .env.local and set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY. Never place a service-role or other secret key in frontend code.
 
-## Run
+## Development
 npm install
 npm run dev
 npm run build
 npm test
+npm run lint
 
-## Supabase
-Apply supabase/migrations/20260924223000_hpo_framework.sql to the target project. Configure authentication and invite users.
+## Database
+Apply migrations in supabase/migrations/ in order to the target Supabase project. The migrations are committed to source control so the database setup is reproducible.
 
-## Production
-Use GitHub Actions for CI and deploy the static frontend to the organisation's approved hosting platform. RLS is enabled on all application tables and ownership checks are used for user records.
+## CI
+GitHub Actions runs build, tests and lint on pushes and pull requests to main.
 
-## Context
-Vision Activ publicly describes its performance management offering as a cloud-based system supporting planning, assessment, improvement, evidence, progress monitoring, reviews and reporting. The application architecture follows that operating rhythm while keeping proprietary framework content configurable.
+## Framework content
+The application structure supports the 12 framework dimensions supplied for this implementation. Any proprietary Vision Activ wording, scoring weights or governance rules should be reviewed and approved by the framework owner before organisational rollout.
