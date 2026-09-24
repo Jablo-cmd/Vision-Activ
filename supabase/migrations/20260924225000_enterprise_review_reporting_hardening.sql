@@ -3,3 +3,6 @@ create table if not exists public.audit_events(id uuid primary key default gen_r
 create index if not exists audit_events_org_created_idx on public.audit_events(organization_id,created_at desc);alter table public.audit_events enable row level security;
 create policy "Members can read org audit events" on public.audit_events for select to authenticated using (private.is_org_member(organization_id));create policy "Members can insert own audit events" on public.audit_events for insert to authenticated with check (private.is_org_member(organization_id) and user_id=auth.uid());
 create index if not exists assessments_org_user_period_idx on public.assessments(organization_id,user_id,period_start desc);create index if not exists commitments_org_user_status_idx on public.commitments(organization_id,user_id,status);create index if not exists scorecard_org_cycle_user_idx on public.scorecard_entries(organization_id,cycle_id,user_id);
+
+drop policy if exists audit_events_member_read on public.audit_events;
+create policy audit_events_lead_read on public.audit_events for select to authenticated using (private.has_org_role(organization_id, array['manager','ceo','admin']));
