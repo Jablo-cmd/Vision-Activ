@@ -1,0 +1,1 @@
+import {describe,expect,it} from "vitest";import {movement,weightedScore} from "./scoring";import {FRAMEWORK_DIMENSIONS} from "../types";describe("scoring",()=>{it("calculates weighted score",()=>expect(weightedScore(FRAMEWORK_DIMENSIONS.map(d=>({dimensionId:d.id,score:4})),FRAMEWORK_DIMENSIONS)).toBe(4));it("calculates movement",()=>expect(movement(4.2,3.7)).toBe(0.5));});
