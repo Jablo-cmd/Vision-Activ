@@ -3,7 +3,7 @@ export type DimensionWorkflow={id:string;name:string;weeklyPrompt:string;piccPro
 export type AssessmentScore={dimensionId:string;score:number;evidence:string};
 export type Assessment={id:string;userId:string;type:"baseline"|"weekly";periodStart:string;periodEnd:string;scores:AssessmentScore[];submittedAt?:string};
 export type Commitment={id:string;dimensionId:string;title:string;action:string;timeframe:string;evidence:string;status:"not_started"|"in_progress"|"complete"};
-export type ScorecardEntry={dimensionId:string;metrics:Record<string,number|string>;evidence:string};
+export type ScorecardEntry={id?:string;dimensionId:string;metrics:Record<string,number|string>;evidence:string};
 export type Review={id:string;assessmentId:string;notes:string;barriers:string;support:string;reviewedAt:string};
 export const DIMENSION_WORKFLOWS:DimensionWorkflow[]=[
 {id:"accountability-ownership",name:"Accountability & Ownership",weeklyPrompt:"What did you own fully this week?",piccPrompt:"What will you own fully next week?",scorecardMetrics:["Proactive actions","Reactive actions"],reviewFocus:"Ownership gaps",consolidationFocus:"Accountability patterns",trendFocus:"Proactive ownership"},
