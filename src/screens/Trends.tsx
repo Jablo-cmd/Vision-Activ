@@ -7,7 +7,6 @@ import {getCurrentUserDashboard} from "../services/data";
 type RangeKey="week"|"fortnight"|"month"|"quarter"|"halfYear";
 const RANGES:[RangeKey,string][]=[["week","Weekly"],["fortnight","Fortnightly"],["month","Monthly"],["quarter","3 Months"],["halfYear","6 Months"]];
 
-function daysBetween(a:string,b:string){return Math.floor((Date.parse(b)-Date.parse(a))/86400000)}
 function bucketStart(date:string,key:RangeKey){const d=new Date(date+"T00:00:00");if(key==="week"){const day=d.getDay();d.setDate(d.getDate()-((day+6)%7))}else if(key==="fortnight"){const day=d.getDay();d.setDate(d.getDate()-((day+6)%7));const week=Math.floor((d.getTime()-new Date(1970,0,5).getTime())/(14*86400000));d.setDate(5+week*14)}else if(key==="month"){d.setDate(1)}else if(key==="quarter"){d.setMonth(Math.floor(d.getMonth()/3)*3,1)}else{d.setMonth(d.getMonth()-5,1)}return d.toISOString().slice(0,10)}
 
 export function Trends(){const[data,setData]=useState<Awaited<ReturnType<typeof getCurrentUserDashboard>>|null>(null);const[error,setError]=useState("");const[range,setRange]=useState<RangeKey>("week");
