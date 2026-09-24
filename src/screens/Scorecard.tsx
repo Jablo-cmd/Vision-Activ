@@ -1,0 +1,58 @@
+import { useState } from "react";
+import { Button, Card } from "../components/ui";
+import { DIMENSION_WORKFLOWS, type ScorecardEntry } from "../types";
+import { ensureCurrentCycle, getMyOrganization, saveScorecard } from "../services/data";
+
+export function Scorecard() {
+  const [entries, setEntries] = useState<Record<string, ScorecardEntry>>({});
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+
+  const update = (dimensionId: string, key: string, value: string) => {
+    setEntries((current) => ({
+      ...current,
+      [dimensionId]: {
+        id: current[dimensionId]?.id,
+        dimensionId,
+        metrics: { ...(current[dimensionId]?.metrics ?? {}), [key]: value },
+        evidence: current[dimensionId]?.evidence ?? ""
+      }
+    }));
+  };
+
+  const evidence = (dimensionId: string, value: string) =>
+    setEntries((current) => ({
+      ...current,
+      [dimensionId]: { ...(current[dimensionId] ?? { dimensionId, metrics: {} }), evidence: value }
+    }));
+
+  const save = async () => {
+    setError("");
+    try {
+      const org = await getMyOrganization();
+      if (!org?.organization_id) throw new Error("Account is not assigned to an organisation.");
+      const cycle = await ensureCurrentCycle(org.organization_id);
+      for (const dimension of DIMENSION_WORKFLOWS) {
+        const entry = entries[dimension.id];
+        if (entry) await saveScorecard(entry, org.organization_id, cycle.id);
+      }
+      setSaved(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to save scorecard.");
+    }
+  };
+
+  return <div className="space-y-6">
+    <div><h1 className="text-3xl font-bold text-[#071a35]">Weekly Scorecard</h1><p className="mt-2 text-slate-500">Track evidence and measurable movement across all 12 dimensions.</p></div>
+    <div className="space-y-4">
+      {DIMENSION_WORKFLOWS.map((d, index) => <Card key={d.id} className="p-5 md:p-6">
+        <div className="mb-4"><div className="text-xs font-bold uppercase tracking-wider text-orange-600">Dimension {index + 1}</div><h2 className="mt-1 font-bold text-[#071a35]">{d.name}</h2></div>
+        <div className="grid gap-3 md:grid-cols-2">
+          {d.scorecardMetrics.map((metric) => <label key={metric} className="text-sm font-semibold text-slate-700">{metric}<input type="text" inputMode="decimal" value={String(entries[d.id]?.metrics[metric] ?? "")} onChange={(e) => update(d.id, metric, e.target.value)} placeholder="Enter value" className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 font-normal outline-none focus:border-orange-500" /></label>)}
+        </div>
+        <textarea aria-label={d.name + " scorecard evidence"} value={entries[d.id]?.evidence ?? ""} onChange={(e) => evidence(d.id, e.target.value)} placeholder="Evidence, variance, corrective action or context…" className="mt-4 min-h-20 w-full rounded-xl border border-slate-200 p-3 text-sm outline-none focus:border-orange-500" />
+      </Card>)}
+    </div>
+    <div className="flex flex-wrap items-center justify-end gap-3">{error && <span role="alert" className="text-sm text-red-600">{error}</span>}<span className="text-sm text-slate-500">{saved ? "Scorecard saved." : "Save your weekly evidence when ready."}</span><Button onClick={save} className="bg-orange-500 text-white hover:bg-orange-600">Save scorecard</Button></div>
+  </div>;
+}
