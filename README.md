@@ -11,7 +11,7 @@ React 18, TypeScript, Vite, Tailwind CSS v4, Recharts and Supabase.
 - Weekly scorecards with measurable evidence.
 - Role-protected 20-minute management reviews.
 - Individual trend analysis.
-- Quarterly leadership consolidation and export.
+- Multi-horizon leadership reporting (weekly, fortnightly, monthly, 3-month and 6-month) with export.
 
 ## Security
 Supabase Row Level Security is enabled on application tables. Employees can manage their own assessment, commitment and scorecard records; management functions are role protected. Audit events record key workspace activity.
