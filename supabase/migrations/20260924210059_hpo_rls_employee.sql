@@ -1,0 +1,7 @@
+create policy dimensions_authenticated_read on public.framework_dimensions for select to authenticated using(active=true and (organization_id is null or private.is_org_member(organization_id)));
+create policy assessments_owner_select on public.assessments for select to authenticated using((select auth.uid())=user_id and (select private.is_org_member(organization_id)));
+create policy assessments_owner_insert on public.assessments for insert to authenticated with check((select auth.uid())=user_id and (select private.is_org_member(organization_id)));
+create policy assessments_owner_update on public.assessments for update to authenticated using((select auth.uid())=user_id and (select private.is_org_member(organization_id))) with check((select auth.uid())=user_id and (select private.is_org_member(organization_id)));
+create policy commitments_owner_select on public.commitments for select to authenticated using((select auth.uid())=user_id and (select private.is_org_member(organization_id)));
+create policy commitments_owner_insert on public.commitments for insert to authenticated with check((select auth.uid())=user_id and (select private.is_org_member(organization_id)));
+create policy commitments_owner_update on public.commitments for update to authenticated using((select auth.uid())=user_id and (select private.is_org_member(organization_id))) with check((select auth.uid())=user_id and (select private.is_org_member(organization_id)));
