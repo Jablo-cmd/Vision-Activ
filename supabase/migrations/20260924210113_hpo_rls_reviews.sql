@@ -1,0 +1,4 @@
+alter table public.management_reviews alter column assessment_id drop not null;
+create policy reviews_lead_select on public.management_reviews for select to authenticated using(((select private.has_org_role(organization_id,array['manager','ceo','admin'])) and reviewer_id=(select auth.uid())) or (subject_user_id=(select auth.uid()) and (select private.is_org_member(organization_id))));
+create policy reviews_lead_insert on public.management_reviews for insert to authenticated with check(reviewer_id=(select auth.uid()) and (select private.has_org_role(organization_id,array['manager','ceo','admin'])));
+create policy reviews_lead_update on public.management_reviews for update to authenticated using(reviewer_id=(select auth.uid()) and (select private.has_org_role(organization_id,array['manager','ceo','admin']))) with check(reviewer_id=(select auth.uid()) and (select private.has_org_role(organization_id,array['manager','ceo','admin'])));
