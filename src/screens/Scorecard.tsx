@@ -1,7 +1,7 @@
 import {useEffect,useState} from "react";
 import {Button,Card} from "../components/ui";
 import {DIMENSION_WORKFLOWS,type AssessmentScore,type ScorecardEntry} from "../types";
-import {ensureCurrentCycle,getMyOrganization,getScorecardEntries,saveAssessment,saveScorecard} from "../services/data";
+import {ensureCurrentCycle,getMyOrganization,getScorecardEntries,saveAssessment,saveScorecard,logAuditEvent} from "../services/data";
 
 export function Scorecard(){
  const[entries,setEntries]=useState<Record<string,ScorecardEntry>>({});
@@ -23,7 +23,7 @@ export function Scorecard(){
    const scores:AssessmentScore[]=DIMENSION_WORKFLOWS.map(d=>({dimensionId:d.id,score:ratings[d.id],evidence:entries[d.id].evidence}));
    await saveAssessment({id:crypto.randomUUID(),userId:"",type:"weekly",periodStart:cycle.week_start,periodEnd:cycle.week_end,scores,submittedAt:new Date().toISOString()},org.organization_id);
    for(const d of DIMENSION_WORKFLOWS){const e=entries[d.id];if(e)await saveScorecard(e,org.organization_id,cycle.id)}
-   setSaved(true);
+   await logAuditEvent("weekly_scorecard_submitted","scorecard",cycle.id,{cycleId:cycle.id,periodStart:cycle.week_start});setSaved(true);
  }catch(e){setError(e instanceof Error?e.message:"Unable to save weekly scorecard.");}finally{setBusy(false)}};
  return <div className="space-y-6">
   <div><h1 className="text-3xl font-bold text-[#172B4D]">Weekly Scorecard</h1><p className="mt-2 text-[#667085]">Rate yourself 1–5, record measurable evidence, and submit the complete weekly operating position across all 12 dimensions.</p>{cycle&&<p className="mt-2 text-xs font-semibold text-[#667085]">Current cycle: {cycle.week_start} → {cycle.week_end}</p>}</div>
