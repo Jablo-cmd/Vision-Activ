@@ -23,13 +23,17 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - run: npm ci
+      - run: npm install
+      - run: npm run lint
+      - run: npm test
       - run: npm run build
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-      - run: npm test
-      - run: npm run lint
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+      - name: Support SPA routes
+        run: cp dist/index.html dist/404.html
+      - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
