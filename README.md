@@ -27,7 +27,7 @@ Vision Activ is a **single-organization application** designed for controlled or
 - Vitest + React Testing Library
 - Recharts
 - GitHub Actions
-- Vercel
+- GitHub Pages
 - Sentry
 
 ## Architecture
@@ -42,7 +42,7 @@ Never expose:
 - Supabase service-role keys
 - Database passwords
 - Supabase access tokens
-- Vercel deployment tokens
+- GitHub Pages deployment tokens
 - Sentry server authentication tokens
 
 Frontend configuration may contain only public client configuration such as the Supabase publishable key and Sentry DSN.
@@ -54,9 +54,9 @@ GitHub Actions performs:
 3. Vitest tests and coverage.
 4. Production build.
 5. Build artifact upload.
-6. Vercel project linking.
-7. Vercel production environment retrieval.
-8. Vercel build artifact creation.
+6. GitHub Pages project linking.
+7. GitHub Pages production environment retrieval.
+8. GitHub Pages build artifact creation.
 9. Artifact upload/download.
 10. Prebuilt production deployment.
 
@@ -68,10 +68,6 @@ Supabase migrations are deliberately controlled through a manual workflow dispat
 `VITE_SENTRY_DSN`
 `SUPABASE_PROJECT_REF`
 `SUPABASE_ACCESS_TOKEN`
-`VERCEL_TOKEN`
-`VERCEL_ORG_ID`
-`VERCEL_PROJECT_ID`
-
 ## Development
 ```bash
 npm install
@@ -133,7 +129,7 @@ The production migration process is intentionally gated. Do not run production m
 ## Deployment
 Production deployments occur from `main` after the quality job passes.
 
-Vercel's prebuilt deployment flow is used so the build artifact produced in CI is the artifact deployed to production.
+GitHub Pages's prebuilt deployment flow is used so the build artifact produced in CI is the artifact deployed to production.
 
 ## Governance
 The framework content, scoring weights, proprietary wording and organisational governance rules should be approved by the Vision Activ framework owner before production rollout.
