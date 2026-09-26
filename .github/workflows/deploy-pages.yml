@@ -19,6 +19,8 @@ jobs:
     name: Lint, test and build
     runs-on: ubuntu-latest
     steps:
+        environment:
+      name: github-pages
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
