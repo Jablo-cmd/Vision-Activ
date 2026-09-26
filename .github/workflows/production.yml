@@ -27,10 +27,11 @@ jobs:
       - run: npm install
       - run: npm run lint
       - run: npm test -- --coverage
-      - run: npm run build
+      - name: Build production bundle
+        run: npm run build
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://kgvzoolxxpbisqciynkc.supabase.co' }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_OyrBlw6EivI0btAgqz8heA_NHnTimpN' }}
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
       - uses: actions/upload-artifact@v4
         with:
