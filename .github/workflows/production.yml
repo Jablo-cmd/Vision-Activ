@@ -1,9 +1,7 @@
-name: Vision Activ Production
+name: Vision Activ Production Checks
 
 on:
   pull_request:
-    branches: [main]
-  push:
     branches: [main]
   workflow_dispatch:
     inputs:
@@ -16,105 +14,34 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: vision-activ-production
-  cancel-in-progress: false
-
-env:
-  NODE_VERSION: "20"
-
 jobs:
   quality:
     name: Lint, test and build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: 20
           cache: npm
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Test
-        run: npm test -- --coverage
-
-      - name: Build
-        run: npm run build
+      - run: npm install
+      - run: npm run lint
+      - run: npm test -- --coverage
+      - run: npm run build
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: vision-activ-dist
           path: dist
           if-no-files-found: error
-
-      - name: Upload test coverage
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: vision-activ-coverage
           path: coverage
           if-no-files-found: warn
-
-  deploy:
-    name: Deploy production to Vercel
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: quality
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: vision-activ-dist
-          path: dist
-
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
-
-      - name: Link Vercel project
-        run: vercel link --yes --project="${{ secrets.VERCEL_PROJECT_ID }}" --scope="${{ secrets.VERCEL_ORG_ID }}" --token="${{ secrets.VERCEL_TOKEN }}"
-
-      - name: Pull Vercel production environment
-        run: vercel pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
-
-      - name: Build Vercel deployment artifact
-        run: vercel build --prod --token="${{ secrets.VERCEL_TOKEN }}"
-
-      - name: Upload Vercel artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: vision-activ-vercel-output
-          path: .vercel/output
-          if-no-files-found: error
-
-      - name: Download Vercel artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: vision-activ-vercel-output
-          path: .vercel/output
-
-      - name: Deploy prebuilt artifact
-        run: vercel deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}"
 
   migrations:
     name: Controlled Supabase migrations
@@ -123,22 +50,15 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
-
       - uses: supabase/setup-cli@v1
         with:
           version: latest
-
-      - name: Link Supabase project
-        run: supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
+      - run: supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-
-      - name: Dry-run migrations
-        run: supabase db push --dry-run
+      - run: supabase db push --dry-run
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-
-      - name: Apply migrations
-        run: supabase db push
+      - run: supabase db push
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
