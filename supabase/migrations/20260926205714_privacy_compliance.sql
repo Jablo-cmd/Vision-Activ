@@ -17,22 +17,6 @@ create index if not exists privacy_consents_user_idx
 
 alter table public.privacy_consents enable row level security;
 
-drop policy if exists privacy_consents_owner_select on public.privacy_consents;
-create policy privacy_consents_owner_select
-  on public.privacy_consents for select to authenticated
-  using ((select auth.uid()) = user_id);
-
-drop policy if exists privacy_consents_owner_insert on public.privacy_consents;
-create policy privacy_consents_owner_insert
-  on public.privacy_consents for insert to authenticated
-  with check ((select auth.uid()) = user_id);
-
-drop policy if exists privacy_consents_owner_update on public.privacy_consents;
-create policy privacy_consents_owner_update
-  on public.privacy_consents for update to authenticated
-  using ((select auth.uid()) = user_id)
-  with check ((select auth.uid()) = user_id);
-
 create table if not exists public.data_retention_policies (
   id uuid primary key default gen_random_uuid(),
   data_category text not null unique,
