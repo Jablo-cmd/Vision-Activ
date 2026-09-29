@@ -1,5 +1,387 @@
-import {useEffect,useState} from "react";import {Plus} from "lucide-react";import {Button,Card} from "../components/ui";import {DIMENSION_WORKFLOWS,type Commitment} from "../types";import {getCurrentUserDashboard,getMyOrganization,saveCommitment,updateCommitmentStatus,logAuditEvent} from "../services/data";
-export function Commitments(){const[items,setItems]=useState<Commitment[]>([]);const[form,setForm]=useState({dimensionId:DIMENSION_WORKFLOWS[0].id,title:"",action:"",timeframe:"",evidence:"",dueDate:"",baselineValue:"",targetValue:"",priority:"normal" as Commitment["priority"]});const[error,setError]=useState("");const[busy,setBusy]=useState(false);
-useEffect(()=>{getCurrentUserDashboard().then(d=>setItems((d.commitments??[]).map(c=>({id:c.id,dimensionId:c.dimension_id,title:c.title,action:c.action,timeframe:c.timeframe,evidence:c.evidence,status:c.status})))).catch(e=>setError(e instanceof Error?e.message:"Unable to load commitments."));},[]);
-const add=async()=>{setError("");if(!form.title.trim()||!form.action.trim()){setError("Commitment title and specific action are required.");return}setBusy(true);try{const org=await getMyOrganization();if(!org?.organization_id)throw new Error("Account is not assigned to an organisation.");const item={...form,id:crypto.randomUUID(),status:"not_started" as const,baselineValue:form.baselineValue?Number(form.baselineValue):null,targetValue:form.targetValue?Number(form.targetValue):null,dueDate:form.dueDate||null};await saveCommitment(item,org.organization_id);setItems(p=>[item,...p]);setForm(p=>({...p,title:"",action:"",timeframe:"",evidence:"",dueDate:"",baselineValue:"",targetValue:"",priority:"normal"}));}catch(e){setError(e instanceof Error?e.message:"Unable to save commitment.");}finally{setBusy(false)}};
-return <div className="space-y-6"><div><h1 className="text-3xl font-bold text-[#2563EB]">Personal Improvement Commitment Charter</h1><p className="mt-2 text-[#64748B]">Create specific commitments against the framework dimensions, with timeframes and observable evidence.</p></div>{error&&<Card className="border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</Card>}<Card className="p-6"><h2 className="font-bold text-[#173B6C]">New PICC commitment</h2><div className="mt-4 grid gap-3 md:grid-cols-2"><select value={form.dimensionId} onChange={e=>setForm(p=>({...p,dimensionId:e.target.value}))} className="rounded-xl border border-slate-200 px-4 py-3"><option value="" disabled>Select dimension</option>{DIMENSION_WORKFLOWS.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</select><input value={form.title} onChange={e=>setForm(p=>({...p,title:e.target.value}))} placeholder="Commitment title" className="rounded-xl border border-slate-200 px-4 py-3"/><input value={form.action} onChange={e=>setForm(p=>({...p,action:e.target.value}))} placeholder="Specific action" className="rounded-xl border border-slate-200 px-4 py-3"/><input value={form.timeframe} onChange={e=>setForm(p=>({...p,timeframe:e.target.value}))} placeholder="Timeframe" className="rounded-xl border border-slate-200 px-4 py-3"/><input value={form.evidence} onChange={e=>setForm(p=>({...p,evidence:e.target.value}))} placeholder="Evidence of improvement" className="rounded-xl border border-slate-200 px-4 py-3"/><input type="date" value={form.dueDate} onChange={e=>setForm(p=>({...p,dueDate:e.target.value}))} aria-label="Due date" className="rounded-xl border border-slate-200 px-4 py-3"/><input type="number" value={form.baselineValue} onChange={e=>setForm(p=>({...p,baselineValue:e.target.value}))} placeholder="Baseline value" className="rounded-xl border border-slate-200 px-4 py-3"/><input type="number" value={form.targetValue} onChange={e=>setForm(p=>({...p,targetValue:e.target.value}))} placeholder="Target value" className="rounded-xl border border-slate-200 px-4 py-3"/><select value={form.priority} onChange={e=>setForm(p=>({...p,priority:e.target.value as Commitment["priority"]}))} className="rounded-xl border border-slate-200 px-4 py-3"><option value="low">Low priority</option><option value="normal">Normal priority</option><option value="high">High priority</option><option value="critical">Critical priority</option></select></div><Button disabled={busy} onClick={add} className="mt-4 bg-[#2563EB] text-white hover:bg-[#2563EB]"><Plus size={16} className="mr-2 inline"/>Add commitment</Button></Card><div className="grid gap-4">{items.length?items.map(item=><Card key={item.id} className="p-5"><div className="flex items-start justify-between gap-4"><div><div className="text-xs font-bold uppercase tracking-wider text-[#60A5FA]">{DIMENSION_WORKFLOWS.find(d=>d.id===item.dimensionId)?.name}</div><h3 className="mt-1 font-bold text-[#2563EB]">{item.title}</h3><p className="mt-1 text-sm text-slate-600">{item.action}</p></div><select aria-label={"Status for "+item.title} value={item.status} onChange={async e=>{const status=e.target.value as Commitment["status"];try{await updateCommitmentStatus(item.id,status);await logAuditEvent("commitment_status_changed","commitment",item.id,{status});setItems(p=>p.map(x=>x.id===item.id?{...x,status}:x))}catch(err){setError(err instanceof Error?err.message:"Unable to update commitment.")}}} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-bold text-[#64748B]"><option value="not_started">Not started</option><option value="in_progress">In progress</option><option value="complete">Complete</option></select></div><div className="mt-4 grid gap-2 text-xs text-[#64748B] md:grid-cols-2"><div>Timeframe: <strong className="text-[#173B6C]">{item.timeframe||"Not specified"}</strong></div><div>Due: <strong className="text-[#173B6C]">{item.dueDate||"Not set"}</strong></div><div>Target: <strong className="text-[#173B6C]">{item.targetValue??"Not set"}</strong></div><div>Evidence: <strong className="text-[#173B6C]">{item.evidence||"Not specified"}</strong></div></div></Card>):<Card className="p-8 text-center text-sm text-[#64748B]">No commitments yet. Create the first PICC commitment above.</Card>}</div></div>}
+import { useMemo, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { CommitmentCard } from "../components/CommitmentCard";
+import { PRIORITY_OPTIONS, ScoreValue, dimensionName } from "../components/domain";
+import {
+  Alert,
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  Input,
+  PageHeader,
+  Select,
+  Spinner,
+  Textarea,
+} from "../components/ui";
+import { useAuth } from "../context/AuthContext";
+import type { CommitmentRow, NewCommitment, Priority } from "../domain";
+import { DIMENSION_WORKFLOWS } from "../framework";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { keys, useAssessments, useMyCommitments, useUserId } from "../hooks/queries";
+import { orgToday } from "../lib/dates";
+import { weakestDimensions } from "../lib/metrics";
+import { validateCommitment, type CommitmentFormValues } from "../lib/validation";
+import { createCommitment } from "../services/commitments";
+import { errorText } from "../services/supabase";
+
+const FILTERS = [
+  { key: "open", label: "Open" },
+  { key: "blocked", label: "Blocked" },
+  { key: "pending", label: "Awaiting verification" },
+  { key: "complete", label: "Complete" },
+  { key: "all", label: "All" },
+] as const;
+type FilterKey = (typeof FILTERS)[number]["key"];
+
+function matches(c: CommitmentRow, f: FilterKey): boolean {
+  switch (f) {
+    case "open":
+      return c.status !== "complete";
+    case "blocked":
+      return c.status === "blocked";
+    case "pending":
+      return c.verification_status === "pending";
+    case "complete":
+      return c.status === "complete";
+    default:
+      return true;
+  }
+}
+
+const blankForm = (dimension = ""): CommitmentFormValues => ({
+  dimension_id: dimension,
+  title: "",
+  action: "",
+  timeframe: "",
+  evidence_plan: "",
+  priority: "normal",
+  due_date: "",
+  measure: "",
+  baseline_value: "",
+  target_value: "",
+});
+
+export function Commitments() {
+  useDocumentTitle("Commitments");
+  const userId = useUserId();
+  const { membership } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [params, setParams] = useSearchParams();
+  const commitments = useMyCommitments();
+  const assessments = useAssessments(userId);
+
+  const presetDimension = params.get("dimension") ?? "";
+  const validPreset = DIMENSION_WORKFLOWS.some((d) => d.id === presetDimension)
+    ? presetDimension
+    : "";
+  const [showForm, setShowForm] = useState(Boolean(validPreset));
+  const [form, setForm] = useState<CommitmentFormValues>(blankForm(validPreset));
+  const [showErrors, setShowErrors] = useState(false);
+  const [filter, setFilter] = useState<FilterKey>("open");
+  const today = orgToday();
+
+  // The assessment the commitment is created from: the most recent one (weekly or baseline).
+  const latest = assessments.data?.[0] ?? null;
+  const weak = useMemo(() => weakestDimensions(latest, 3), [latest]);
+  const scoreFor = (dimensionId: string) =>
+    latest?.scores.find((s) => s.dimensionId === dimensionId)?.score ?? null;
+  const errors = validateCommitment(form, today);
+  const err = (k: string) => (showErrors ? errors[k] : undefined);
+
+  const create = useMutation({
+    mutationFn: () => {
+      const score = scoreFor(form.dimension_id);
+      const input: NewCommitment = {
+        dimension_id: form.dimension_id,
+        title: form.title.trim(),
+        action: form.action.trim(),
+        timeframe: form.timeframe.trim(),
+        evidence_plan: form.evidence_plan.trim(),
+        priority: form.priority,
+        due_date: form.due_date || null,
+        measure: form.measure.trim(),
+        baseline_value: form.baseline_value.trim() === "" ? null : Number(form.baseline_value),
+        target_value: form.target_value.trim() === "" ? null : Number(form.target_value),
+        source_assessment_id: latest && score !== null ? latest.id : null,
+        source_score: score,
+      };
+      return createCommitment(input, membership!.organization_id);
+    },
+    onSuccess: async (row) => {
+      await queryClient.invalidateQueries({ queryKey: keys.myCommitments });
+      navigate(`/commitments/${row.id}`);
+    },
+  });
+
+  const open = (dimension = "") => {
+    setForm(blankForm(dimension));
+    setShowErrors(false);
+    setShowForm(true);
+  };
+
+  const close = () => {
+    setShowForm(false);
+    if (params.has("dimension")) {
+      params.delete("dimension");
+      setParams(params, { replace: true });
+    }
+  };
+
+  const submit = () => {
+    setShowErrors(true);
+    if (Object.keys(errors).length === 0) create.mutate();
+  };
+
+  if (commitments.isPending || assessments.isPending) return <Spinner />;
+  if (commitments.isError) return <Alert tone="error">{errorText(commitments.error)}</Alert>;
+
+  const all = commitments.data;
+  const visible = all.filter((c) => matches(c, filter));
+  const dimensionsWithOpen = new Set(
+    all.filter((c) => c.status !== "complete").map((c) => c.dimension_id),
+  );
+  const suggestions = weak.filter((w) => !dimensionsWithOpen.has(w.dimensionId) && w.score <= 3);
+  const sourceScore = form.dimension_id ? scoreFor(form.dimension_id) : null;
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Personal Improvement Commitment Charter"
+        subtitle="Turn a weakness you identified into a measurable commitment with a target, a deadline and the evidence you will show."
+        actions={
+          !showForm && (
+            <Button onClick={() => open()}>
+              <Plus size={16} aria-hidden="true" /> New commitment
+            </Button>
+          )
+        }
+      />
+
+      {suggestions.length > 0 && !showForm && (
+        <Card className="border-brand-200 bg-brand-50 p-4">
+          <h2 className="font-semibold text-brand-900">Suggested from your latest assessment</h2>
+          <p className="mt-1 text-sm text-brand-900">
+            These are your lowest-scoring dimensions without an open commitment.
+          </p>
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {suggestions.map((s) => (
+              <li key={s.dimensionId}>
+                <Button variant="secondary" size="sm" onClick={() => open(s.dimensionId)}>
+                  {dimensionName(s.dimensionId)} <ScoreValue score={s.score} />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      {showForm && (
+        <Card className="p-5">
+          <h2 className="text-lg font-semibold text-ink-900">New commitment</h2>
+          {create.isError && (
+            <div className="mt-3">
+              <Alert tone="error">{errorText(create.error)}</Alert>
+            </div>
+          )}
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <Field label="Dimension to improve" error={err("dimension_id")}>
+              {(p) => (
+                <Select
+                  {...p}
+                  value={form.dimension_id}
+                  onChange={(e) => setForm({ ...form, dimension_id: e.target.value })}
+                >
+                  <option value="">Select a dimension</option>
+                  {DIMENSION_WORKFLOWS.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
+            <div className="self-end text-sm text-ink-700">
+              {sourceScore !== null && latest ? (
+                <p>
+                  Your latest score here is <ScoreValue score={sourceScore} /> — recorded as the
+                  starting point for this commitment.
+                </p>
+              ) : (
+                <p className="text-ink-500">
+                  Submit an assessment first so improvement can be measured against a score.
+                </p>
+              )}
+            </div>
+            <Field label="Title" error={err("title")} className="md:col-span-2">
+              {(p) => (
+                <Input
+                  {...p}
+                  maxLength={120}
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                />
+              )}
+            </Field>
+            <Field
+              label="Specific action"
+              hint={DIMENSION_WORKFLOWS.find((d) => d.id === form.dimension_id)?.piccPrompt}
+              error={err("action")}
+              className="md:col-span-2"
+            >
+              {(p) => (
+                <Textarea
+                  {...p}
+                  maxLength={1000}
+                  value={form.action}
+                  onChange={(e) => setForm({ ...form, action: e.target.value })}
+                />
+              )}
+            </Field>
+            <Field label="Due date" error={err("due_date")}>
+              {(p) => (
+                <Input
+                  {...p}
+                  type="date"
+                  min={today}
+                  value={form.due_date}
+                  onChange={(e) => setForm({ ...form, due_date: e.target.value })}
+                />
+              )}
+            </Field>
+            <Field label="Priority">
+              {(p) => (
+                <Select
+                  {...p}
+                  value={form.priority}
+                  onChange={(e) => setForm({ ...form, priority: e.target.value as Priority })}
+                >
+                  {PRIORITY_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
+            <Field
+              label="What will you measure? (optional)"
+              hint="For example: deadlines met per week"
+              error={err("measure")}
+              className="md:col-span-2"
+            >
+              {(p) => (
+                <Input
+                  {...p}
+                  maxLength={80}
+                  value={form.measure}
+                  onChange={(e) => setForm({ ...form, measure: e.target.value })}
+                />
+              )}
+            </Field>
+            <Field label="Baseline value" error={err("baseline_value")}>
+              {(p) => (
+                <Input
+                  {...p}
+                  type="number"
+                  step="any"
+                  inputMode="decimal"
+                  value={form.baseline_value}
+                  onChange={(e) => setForm({ ...form, baseline_value: e.target.value })}
+                />
+              )}
+            </Field>
+            <Field label="Target value" error={err("target_value")}>
+              {(p) => (
+                <Input
+                  {...p}
+                  type="number"
+                  step="any"
+                  inputMode="decimal"
+                  value={form.target_value}
+                  onChange={(e) => setForm({ ...form, target_value: e.target.value })}
+                />
+              )}
+            </Field>
+            <Field label="Timeframe (optional)" className="md:col-span-2">
+              {(p) => (
+                <Input
+                  {...p}
+                  maxLength={80}
+                  value={form.timeframe}
+                  onChange={(e) => setForm({ ...form, timeframe: e.target.value })}
+                  placeholder="e.g. Next 4 weeks"
+                />
+              )}
+            </Field>
+            <Field
+              label="Evidence you will provide"
+              hint="What will prove the improvement to your manager?"
+              className="md:col-span-2"
+            >
+              {(p) => (
+                <Textarea
+                  {...p}
+                  maxLength={1000}
+                  value={form.evidence_plan}
+                  onChange={(e) => setForm({ ...form, evidence_plan: e.target.value })}
+                />
+              )}
+            </Field>
+          </div>
+          <div className="mt-5 flex gap-3">
+            <Button onClick={submit} loading={create.isPending}>
+              Create commitment
+            </Button>
+            <Button variant="secondary" onClick={close}>
+              Cancel
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      <div role="group" aria-label="Filter commitments" className="flex flex-wrap gap-2">
+        {FILTERS.map((f) => (
+          <button
+            key={f.key}
+            type="button"
+            aria-pressed={filter === f.key}
+            onClick={() => setFilter(f.key)}
+            className={
+              "rounded-lg border px-3 py-1.5 text-sm font-semibold " +
+              (filter === f.key
+                ? "border-brand-700 bg-brand-700 text-white"
+                : "border-line bg-white text-brand-800 hover:bg-brand-50")
+            }
+          >
+            {f.label} ({all.filter((c) => matches(c, f.key)).length})
+          </button>
+        ))}
+      </div>
+
+      {visible.length === 0 ? (
+        <EmptyState
+          title={all.length === 0 ? "No commitments yet" : "Nothing matches this filter"}
+          action={
+            all.length === 0 && !showForm ? (
+              <Button onClick={() => open()}>Create your first commitment</Button>
+            ) : undefined
+          }
+        >
+          {all.length === 0
+            ? "Commitments turn your assessment results into measurable actions."
+            : "Try another filter."}
+        </EmptyState>
+      ) : (
+        <div className="grid gap-3">
+          {visible.map((c) => (
+            <CommitmentCard key={c.id} c={c} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
