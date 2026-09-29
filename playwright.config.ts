@@ -7,7 +7,8 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   fullyParallel: false,
   workers: 1,
-  retries: process.env.CI ? 1 : 0,
+  // Flows share database state, so a retry would start from a dirty database; fail fast instead.
+  retries: 0,
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
   use: {
     baseURL: "http://127.0.0.1:4173",
@@ -27,6 +28,10 @@ export default defineConfig({
       testIgnore: /05-mobile\.spec\.ts/,
       use: { ...devices["Desktop Chrome"], viewport: { width: 1360, height: 900 } },
     },
-    { name: "mobile", testMatch: /(05-mobile|06-screens)\.spec\.ts/, use: { ...devices["Pixel 7"] } },
+    {
+      name: "mobile",
+      testMatch: /(05-mobile|06-screens)\.spec\.ts/,
+      use: { ...devices["Pixel 7"] },
+    },
   ],
 });

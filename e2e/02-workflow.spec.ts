@@ -206,13 +206,16 @@ test("VERIFY: a manager cannot verify without accepted evidence; then verifies a
   await expect(verify).toBeDisabled();
   await expect(mgr.getByText("Accept at least one piece of evidence")).toBeVisible();
 
-  // The manager can open the private file through a short-lived signed link
+  // The manager can open the private file through a short-lived signed link. Assert on the bytes served
+  // rather than on rendering, which differs between headless browsers (PDFs download instead of load).
   const [popup] = await Promise.all([
     mgr.waitForEvent("popup"),
     mgr.getByRole("button", { name: /close-report\.pdf/ }).click(),
   ]);
-  await popup.waitForLoadState();
-  expect(popup.url()).toContain("/storage/v1/object/sign/evidence/");
+  await popup.waitForURL(/\/storage\/v1\/object\/sign\/evidence\//, { waitUntil: "commit" });
+  const signed = await mgr.request.get(popup.url());
+  expect(signed.status()).toBe(200);
+  expect(await signed.text()).toContain("%PDF-1.4 close report");
   await popup.close();
 
   // Rejecting evidence needs a reason
