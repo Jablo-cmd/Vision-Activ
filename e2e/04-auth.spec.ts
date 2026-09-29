@@ -27,6 +27,9 @@ test("password reset works end to end from the emailed link", async ({ page, req
 
   await page.goto("/login");
   await page.getByRole("link", { name: "Forgot your password?" }).click();
+  // Wait for the route change: both pages have a "Work email" field, and typing before the swap
+  // would fill the login form's field instead.
+  await expect(page.getByRole("heading", { name: "Reset your password" })).toBeVisible();
   await page.getByLabel("Work email").fill("e2@va.test");
   await page.getByRole("button", { name: "Send reset link" }).click();
   await expect(page.getByText("If an account exists for that address")).toBeVisible();
