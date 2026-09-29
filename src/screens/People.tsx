@@ -16,7 +16,7 @@ import {
   Th,
 } from "../components/ui";
 import { useAuth } from "../context/AuthContext";
-import type { Role } from "../domain";
+import { ROLE_LABEL, type Role } from "../domain";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { keys, useDirectory } from "../hooks/queries";
 import {
@@ -97,7 +97,7 @@ function InviteForm({ assignable }: { assignable: Role[] }) {
             <Select {...p} value={role} onChange={(e) => setRole(e.target.value as Role)}>
               {assignable.map((r) => (
                 <option key={r} value={r}>
-                  {r}
+                  {ROLE_LABEL[r]}
                 </option>
               ))}
             </Select>
@@ -181,7 +181,7 @@ function Row({
             >
               {ROLES.filter((r) => assignable.includes(r) || r === p.role).map((r) => (
                 <option key={r} value={r}>
-                  {r}
+                  {ROLE_LABEL[r]}
                 </option>
               ))}
             </Select>
@@ -210,6 +210,19 @@ function Row({
             </Select>
           </Td>
           <Td>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="size-4 accent-brand-700"
+                aria-label={`Track performance for ${displayName(p)}`}
+                checked={p.tracked}
+                disabled={change.isPending}
+                onChange={(e) => change.mutate({ userId: p.id, tracked: e.target.checked })}
+              />
+              {p.tracked ? "Tracked" : "Not tracked"}
+            </label>
+          </Td>
+          <Td>
             <Button
               size="sm"
               variant={p.active ? "secondary" : "primary"}
@@ -223,7 +236,7 @@ function Row({
         </>
       ) : (
         <>
-          <Td colSpan={2}>
+          <Td colSpan={3}>
             <Badge tone="warn">Has an account but no access</Badge>
           </Td>
           <Td>
@@ -265,6 +278,7 @@ export function People() {
               <Th>Person</Th>
               <Th>Role</Th>
               <Th>Reports to</Th>
+              <Th>Performance</Th>
               <Th>Access</Th>
             </tr>
           </thead>

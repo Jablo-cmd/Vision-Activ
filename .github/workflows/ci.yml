@@ -1,4 +1,5 @@
 name: CI
+
 on:
   push:
     branches: [main]
@@ -6,15 +7,128 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: 22
+
 jobs:
   quality:
+    name: Lint, typecheck, unit tests, build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-      - run: npm install
-      - run: npm run build
-      - run: npm test
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npx prettier --check "src/**/*.{ts,tsx,css}" "e2e/**/*.ts" "supabase/functions/**/*.ts"
       - run: npm run lint
+      - run: npx tsc -b
+      - name: Unit tests with coverage thresholds
+        run: npx vitest run --coverage
+      - name: Unit tests are time-zone independent
+        run: TZ=Pacific/Auckland npx vitest run
+      - name: Production build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://example.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: public-placeholder
+
+  database:
+    name: Migrations replay and pgTAP (RLS, integrity, reporting)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: supabase/postgres:17.6.1.171
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 54329:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -h localhost"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Replay every migration on a clean database
+        run: ./scripts/db-replay.sh
+      - name: Run pgTAP suites
+        run: ./scripts/db-test.sh
+
+  e2e:
+    name: Browser end-to-end (real auth, RLS, storage)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Start local Supabase (Postgres, Auth, REST, Storage, Mail) with all migrations
+        run: ./scripts/e2e-stack.sh
+      - name: Run Playwright
+        run: npx playwright test
+        env:
+          CI: "true"
+      - name: Stack logs on failure
+        if: failure()
+        run: |
+          docker logs va-auth 2>&1 | tail -50 || true
+          docker logs va-rest 2>&1 | tail -50 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+
+  deploy:
+    name: Deploy to GitHub Pages
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [quality, database, e2e]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Production build
+        run: npm run build
+        env:
+          # Public client configuration only (publishable key, never a secret). Repository secrets override.
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://kgvzoolxxpbisqciynkc.supabase.co' }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_OyrBlw6EivI0btAgqz8heA_NHnTimpN' }}
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+      - name: Single-page-app fallback for deep links
+        run: cp dist/index.html dist/404.html
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+      - id: deployment
+        uses: actions/deploy-pages@v4

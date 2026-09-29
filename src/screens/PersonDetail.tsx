@@ -18,6 +18,7 @@ import {
   Td,
   Th,
 } from "../components/ui";
+import { ROLE_LABEL } from "../domain";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { nameOf, useDirectory } from "../hooks/queries";
 import { formatDate, formatDay } from "../lib/dates";
@@ -87,8 +88,8 @@ export function PersonDetail() {
       <PageHeader
         title={person.full_name || person.email}
         subtitle={
-          <span className="capitalize">
-            {person.role}
+          <span>
+            {person.role ? ROLE_LABEL[person.role] : "No access"}
             {person.manager_user_id
               ? ` · reports to ${nameOf(directory.data, person.manager_user_id)}`
               : ""}

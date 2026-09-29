@@ -241,6 +241,7 @@ describe("attentionReasons", () => {
     role: "employee",
     manager_user_id: null,
     active: true,
+    tracked: true,
     latest_week: "2026-09-21",
     latest_score: 4,
     previous_score: 4,
@@ -271,6 +272,17 @@ describe("attentionReasons", () => {
       "1 overdue",
       "2 blocked",
     ]);
+  });
+  it("does not flag people who are not part of performance tracking", () => {
+    expect(
+      attentionReasons({
+        ...base,
+        tracked: false,
+        submitted_current: false,
+        missed_last_4: 4,
+        latest_score: 1,
+      }),
+    ).toEqual([]);
   });
   it("ignores deactivated people and missing history", () => {
     expect(attentionReasons({ ...base, active: false, latest_score: 1 })).toEqual([]);

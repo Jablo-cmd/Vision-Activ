@@ -219,18 +219,12 @@ export function measuredProgress(
   return Math.max(0, Math.min(100, Math.round(pct)));
 }
 
-export function countBy<T>(items: T[], predicate: (item: T) => boolean): number {
-  let n = 0;
-  for (const i of items) if (predicate(i)) n++;
-  return n;
-}
-
 /* ---------------------------------------------------------------------------------------------- */
 /* People                                                                                          */
 /* ---------------------------------------------------------------------------------------------- */
 
 export function attentionReasons(m: MemberStatus): string[] {
-  if (!m.active) return [];
+  if (!m.active || !m.tracked) return [];
   const reasons: string[] = [];
   if (!m.submitted_current && m.missed_last_4 >= 2)
     reasons.push(`Missed ${m.missed_last_4} of the last 4 weeks`);

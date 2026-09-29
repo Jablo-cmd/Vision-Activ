@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { addDays, addMonths, diffDays, formatDate, isIsoDate, orgToday, weekStart } from "./dates";
+import {
+  addDays,
+  addMonths,
+  dateOfTimestamp,
+  diffDays,
+  formatDate,
+  formatDateTime,
+  formatDay,
+  isIsoDate,
+  orgToday,
+  weekStart,
+} from "./dates";
 
 describe("orgToday", () => {
   it("uses South African time, not UTC", () => {
@@ -44,5 +55,18 @@ describe("date arithmetic", () => {
   it("formats", () => {
     expect(formatDate("2026-09-29")).toBe("29 Sep 2026");
     expect(formatDate(null)).toBe("—");
+  });
+});
+
+describe("timestamp formatting uses organisation time", () => {
+  it("renders a UTC timestamp in South African time", () => {
+    // 22:30 UTC on 28 Sep is 00:30 on 29 Sep in Johannesburg
+    expect(formatDateTime("2026-09-28T22:30:00Z")).toBe("29 Sep 2026, 00:30");
+    expect(dateOfTimestamp("2026-09-28T22:30:00Z")).toBe("2026-09-29");
+    expect(dateOfTimestamp("2026-09-28T21:59:00Z")).toBe("2026-09-28");
+  });
+  it("handles missing values and short dates", () => {
+    expect(formatDateTime(null)).toBe("—");
+    expect(formatDay("2026-09-29")).toBe("29 Sep");
   });
 });

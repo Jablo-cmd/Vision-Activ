@@ -179,7 +179,7 @@ begin
   if v_dow >= 4 then
     for r in
       select m.user_id from public.organization_members m
-      where m.active and not exists (
+      where m.active and m.performance_tracked and not exists (
         select 1 from public.assessments a
         where a.user_id = m.user_id and a.assessment_type = 'weekly' and a.period_start = v_week
       )
@@ -195,7 +195,7 @@ begin
     for r in
       select m.manager_user_id as mgr, count(*) as missing
       from public.organization_members m
-      where m.active and m.manager_user_id is not null and not exists (
+      where m.active and m.performance_tracked and m.manager_user_id is not null and not exists (
         select 1 from public.assessments a
         where a.user_id = m.user_id and a.assessment_type = 'weekly' and a.period_start = v_week
       )

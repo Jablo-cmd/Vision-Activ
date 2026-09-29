@@ -1,135 +1,121 @@
 # Vision Activ — High-Performance Operating Framework
 
-Enterprise-grade web application for the Vision Activ operating cycle:
+A single-organisation performance-management application built around one closed loop:
 
-**Assess → Commit → Track → Review → Improve**
+**ASSESS → COMMIT → TRACK → ACT → VERIFY → REVIEW → IMPROVE**
 
-Vision Activ is a **single-organization application** designed for controlled organisational performance management. It is not a multi-tenant SaaS platform.
+| Stage | What the application does |
+|---|---|
+| Assess | One-off baseline and a weekly scorecard across the 12 framework dimensions (1–5 rating, measures, evidence). |
+| Commit | Commitments (PICC) created from a weak dimension, linked to the score they start from, with baseline, target, measure and due date. |
+| Track | Status, measured progress, blockers (which notify the manager), owner-only editing. |
+| Act | A dated act log of updates, plus evidence: notes, links, measurements and files (private storage). |
+| Verify | The owner's manager reviews evidence and verifies or reopens the commitment; verified work is locked. |
+| Review | Structured manager reviews (evidence, barriers, support, actions, follow-up) the employee can read. |
+| Improve | "Did it work?": each completed commitment is compared with the next weekly score in its dimension. |
 
-## Core capabilities
-- Baseline assessment across 12 performance dimensions with 1–5 scoring and evidence.
-- Personal Improvement Commitment Charter (PICC).
-- Weekly scorecards with measurable evidence.
-- Role-protected management reviews.
-- Individual trend analysis.
-- Weekly, fortnightly, monthly, 3-month and 6-month reporting.
-- Audit-event recording.
-- Supabase Row Level Security and role-based access control.
-- Privacy and retention controls.
-- Production monitoring with Sentry.
-
-## Technology
-- React 18
-- TypeScript
-- Vite
-- Tailwind CSS v4
-- Supabase PostgreSQL + Auth + RLS
-- Vitest + React Testing Library
-- Recharts
-- GitHub Actions
-- GitHub Pages
-- Sentry
+Executives get a **cockpit** (score, weakest / improving / deteriorating dimensions, 8-week heat map, people needing attention,
+blocked / overdue / awaiting-verification queues, evidence gaps, outcomes). Managers see the same for their reporting line only.
 
 ## Architecture
-The system uses one Vision Activ organisation.
 
-The database retains an organisation identifier because it provides an explicit security boundary for organisation membership and RLS. A database singleton constraint prevents the application from becoming multi-tenant.
-
-## Security
-Supabase RLS protects application tables. Access decisions are based on authenticated identity, active organisation membership and application role.
-
-Never expose:
-- Supabase service-role keys
-- Database passwords
-- Supabase access tokens
-- GitHub Pages deployment tokens
-- Sentry server authentication tokens
-
-Frontend configuration may contain only public client configuration such as the Supabase publishable key and Sentry DSN.
-
-## Production CI/CD
-GitHub Actions performs:
-1. Dependency installation.
-2. ESLint.
-3. Vitest tests and coverage.
-4. Production build.
-5. Build artifact upload.
-6. GitHub Pages project linking.
-7. GitHub Pages production environment retrieval.
-8. GitHub Pages build artifact creation.
-9. Artifact upload/download.
-10. Prebuilt production deployment.
-
-Supabase migrations are deliberately controlled through a manual workflow dispatch with an explicit migration switch and a dry-run before `supabase db push`.
-
-## Required GitHub secrets
-`VITE_SUPABASE_URL`
-`VITE_SUPABASE_PUBLISHABLE_KEY`
-`VITE_SENTRY_DSN`
-`SUPABASE_PROJECT_REF`
-`SUPABASE_ACCESS_TOKEN`
-## Development
-```bash
-npm install
-npm run dev
-npm run lint
-npm test
-npm run build
+```
+Browser (React 18 + TypeScript, Vite, Tailwind 4, React Router, TanStack Query)
+   │  lazy routes · route guards (UX only) · typed service layer · no Supabase calls in components
+   ▼
+Supabase Auth (email + password, password reset, invitations)
+   ▼
+PostgREST  ──►  Postgres 17  (the security boundary)
+   │              ├─ Row Level Security on every table, scoped by reporting line
+   │              ├─ private.visible_user_ids()  self + reporting subtree (CEO/admin: everyone)
+   │              ├─ validated RPCs for every write that carries business rules
+   │              │    submit_baseline · submit_weekly_position · ensure_current_cycle
+   │              │    verify_commitment · review_evidence · admin_add_member · admin_update_member
+   │              ├─ triggers: commitment state machine, score/metric validation, notifications
+   │              ├─ append-only audit_log (trigger-written; actor, before/after values)
+   │              ├─ report_* functions (SECURITY INVOKER: RLS applies to reports)
+   │              └─ pg_cron: daily notification generator
+   ├──►  Storage: private "evidence" bucket (owner writes under <user_id>/…, reads follow reporting lines)
+   └──►  Edge Function: invite-user (sends the auth invite; membership is created with the caller's own JWT)
 ```
 
-## Testing
-The repository includes tests covering:
-- Audit-event payload construction.
-- Management-review state transitions.
-- RLS policy contract expectations.
+Single organisation is deliberate: `organization_id` is kept as an explicit boundary and a unique index prevents a second
+organisation. Reporting lines (`organization_members.manager_user_id`) provide the team structure.
 
-For production RLS verification, run authenticated integration tests against a dedicated test environment rather than using privileged service-role credentials in browser tests.
+### Roles
 
-## Monitoring
-Sentry is initialized before React mounts. The application uses:
-- Production error capture.
-- React Error Boundary capture.
-- Browser performance tracing.
-- Environment-aware trace sampling.
-- `sendDefaultPii: false`.
+| | Employee | Manager | CEO | Administrator |
+|---|---|---|---|---|
+| Own assessments, commitments, evidence | ✔ create / edit own | ✔ | ✔ | ✔ |
+| See other people's data | — | own reporting line | everyone | everyone |
+| Comment on / review evidence / verify commitments | — | their reports | everyone (not themselves) | everyone (not themselves) |
+| Record reviews | — | their reports | everyone (not themselves) | everyone (not themselves) |
+| Cockpit, team, reports | — | own line | ✔ | ✔ |
+| People, audit log | — | — | ✔ (employees & managers only) | ✔ |
 
-Create a Sentry React project and store its DSN as `VITE_SENTRY_DSN`.
+Nobody can verify their own work, edit a verified commitment, or write to the audit log. These rules are enforced in Postgres
+and tested there; hiding a button is never the control.
 
-## Privacy and governance
-The database includes structures for:
-- Privacy consent records.
-- Lawful processing basis.
-- Privacy-notice versions.
-- Consent withdrawal timestamps.
-- Data retention categories.
-- Retention periods.
-- Deletion/anonymisation/archive methods.
+## Development
 
-These controls support POPIA/GDPR operationalisation but do not by themselves constitute legal compliance. Vision Activ should maintain a current privacy notice, retention schedule, data-subject request process and incident-response procedure.
+```bash
+npm ci
+cp .env.example .env.local        # VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY, optional VITE_SENTRY_DSN
+npm run dev
+```
+
+| Command | What it does |
+|---|---|
+| `npm run lint` · `npx tsc -b` | ESLint (incl. React hooks rules, no `any`) and strict TypeScript |
+| `npm test` | Unit tests (`src/lib` calculations, validation; Edge Function validation). Coverage thresholds enforced |
+| `./scripts/e2e-stack.sh` | Starts a real local Supabase subset (Postgres, Auth, PostgREST, Storage, Mail) with every migration applied |
+| `./scripts/db-test.sh` | pgTAP suites: RLS per role, integrity, lifecycle, audit, notifications, reporting |
+| `npx playwright test` | Browser tests against that stack: full closed loop, authorisation attacks, password reset by email, WCAG scan, mobile |
+| `E2E_SCREENSHOTS=1 npx playwright test 06-screens` | Design-review screenshots into `e2e-screens/` |
+
+Docker is required for the local stack. If your Playwright browser build differs from the installed one, set
+`E2E_CHROMIUM=/path/to/chrome`.
+
+### What the tests prove
+
+* **pgTAP** impersonates each role with real JWT claims against the real policies: employees cannot read or edit each other, managers see
+  only their line, nobody can forge audit entries, invalid scores/dates/state combinations are rejected, history cannot be cascade-deleted,
+  `anon` and PUBLIC hold no privileges, every `SECURITY DEFINER` function pins `search_path`.
+* **Playwright** drives the real UI against real Auth/PostgREST/Storage: the closed loop across employee → manager → CEO, direct API attacks
+  with a peer's valid token, private file upload and signed-URL download, password reset from the captured email, axe WCAG 2.1 A/AA
+  on every screen for every role, and phone-width layouts.
+* **Vitest** covers the pure calculation library at 100% of lines and functions, and re-runs under other time zones.
+
+## CI/CD
+
+`.github/workflows/ci.yml` — one pipeline: **quality** (prettier, ESLint, tsc, unit tests + coverage, build) ·
+**database** (clean replay of all migrations + pgTAP) · **e2e** (Playwright on the local stack) · **deploy** to GitHub Pages
+(only on `main`, only when all three pass). `.github/workflows/migrations.yml` applies production migrations: manual, approval-gated
+(`production` environment), always dry-runs first, CLI version pinned.
+
+Secrets (all optional except migrations): `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SENTRY_DSN`,
+`SUPABASE_PROJECT_REF`, `SUPABASE_ACCESS_TOKEN`. Never put a service-role key in the frontend or in a `VITE_` variable.
+
+## Database
+
+All schema lives in `supabase/migrations/` and replays deterministically from an empty database (CI proves it on every push).
+Do not edit an applied migration; add a new one. See [`docs/OPERATIONS.md`](docs/OPERATIONS.md) for the production checklist
+(Auth settings, first administrator, backups, monitoring) and [`docs/audit/`](docs/audit/) for the independent audit that drove this work.
 
 ## Design system
-The interface follows a premium executive palette:
-- Deep Navy: `#071A33`
-- Dark Navy: `#03101F`
-- Vision Orange: `#F28C28`
-- Dark Orange: `#D96F16`
-- White: `#FFFFFF`
-- Soft White: `#F7F9FC`
-- Border: `#DCE3EA`
-- Text: `#152238`
-- Muted: `#667085`
 
-Use navy for application chrome and authority, white for content surfaces, soft white for workspace backgrounds, and orange for primary actions and key emphasis.
+Friendly corporate blue on white. Tokens live in `src/index.css`; every text/background pairing meets WCAG AA (axe verifies it in CI).
+Colour is never the only signal: scores, deltas and statuses always carry text.
 
-## Database migrations
-All schema changes are version-controlled under `supabase/migrations/`.
+## Privacy and governance
 
-The production migration process is intentionally gated. Do not run production migrations automatically on every pull request.
+The database has structures for consent records and retention policies (`privacy_consents`, `data_retention_policies`), an append-only
+audit trail, and no cascade deletion of performance history (deactivate people rather than deleting them). These support POPIA/GDPR
+operations but are not legal compliance by themselves: keep a current privacy notice, retention schedule, data-subject-request process
+and incident-response plan. Framework wording, scoring and governance rules should be approved by the framework owner before roll-out.
 
-## Deployment
-Production deployments occur from `main` after the quality job passes.
+## Known limitations
 
-GitHub Pages's prebuilt deployment flow is used so the build artifact produced in CI is the artifact deployed to production.
-
-## Governance
-The framework content, scoring weights, proprietary wording and organisational governance rules should be approved by the Vision Activ framework owner before production rollout.
+* Notifications are in-app only; email digests need a provider (Resend/Postmark/SES) wired to an Edge Function.
+* The team structure is the reporting line; matrix/dotted-line teams and 360° feedback, moderation/calibration and planning cascades are not built.
+* Anonymisation for erasure requests is not implemented (the `anonymize` retention method is recorded, not executed).

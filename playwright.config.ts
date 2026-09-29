@@ -22,7 +22,11 @@ export default defineConfig({
     timeout: 180_000,
   },
   projects: [
-    { name: "desktop", use: { ...devices["Desktop Chrome"], viewport: { width: 1360, height: 900 } } },
-    { name: "mobile", testMatch: /mobile\.spec\.ts/, use: { ...devices["Pixel 7"] } },
+    {
+      name: "desktop",
+      testIgnore: /05-mobile\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1360, height: 900 } },
+    },
+    { name: "mobile", testMatch: /(05-mobile|06-screens)\.spec\.ts/, use: { ...devices["Pixel 7"] } },
   ],
 });

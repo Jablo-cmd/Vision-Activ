@@ -34,9 +34,10 @@ set search_path = ''
 as $$
   select g.wk::date as week_start,
          (select count(distinct a.user_id) from public.assessments a
+           join public.organization_members t on t.user_id = a.user_id and t.performance_tracked
            where a.assessment_type = 'weekly' and a.period_start = g.wk::date)::integer as submitted,
          (select count(*) from public.organization_members m
-           where m.active and m.created_at::date <= g.wk::date + 6
+           where m.active and m.performance_tracked and m.created_at::date <= g.wk::date + 6
              and m.user_id in (select private.visible_user_ids()))::integer as expected
   from generate_series(date_trunc('week', p_from::timestamp), p_to::timestamp, interval '7 days') as g (wk)
   order by 1;
@@ -46,7 +47,7 @@ $$;
 create or replace function public.report_member_status()
 returns table (
   user_id uuid, full_name text, email text, role text, manager_user_id uuid, active boolean,
-  latest_week date, latest_score numeric, previous_score numeric,
+  tracked boolean, latest_week date, latest_score numeric, previous_score numeric,
   submitted_current boolean, missed_last_4 integer,
   open_commitments integer, overdue_commitments integer, blocked_commitments integer,
   pending_verification integer
@@ -73,12 +74,14 @@ as $$
     group by c.user_id
   )
   select m.user_id, p.full_name, p.email, m.role, m.manager_user_id, m.active,
+         m.performance_tracked,
          w1.period_start,
          round(w1.avg_score, 2),
          round(w2.avg_score, 2),
          exists (select 1 from weekly w where w.user_id = m.user_id and w.period_start = (select wk from cur)),
          (select count(*)::integer from generate_series(1, 4) g
-           where m.created_at::date <= (select wk from cur) - 7 * g + 6
+           where m.performance_tracked
+             and m.created_at::date <= (select wk from cur) - 7 * g + 6
              and not exists (select 1 from weekly w
                              where w.user_id = m.user_id and w.period_start = (select wk from cur) - 7 * g)),
          coalesce(cm.open_c, 0)::integer,

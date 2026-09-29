@@ -169,7 +169,7 @@ export function Cockpit() {
         subtitle={`${executive ? "Organisation" : "Your team"} performance for the week of ${formatDay(view.anchor)}${view.anchor !== currentWeek ? " (latest week with data)" : ""}, and what needs management action.`}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-6">
         <Stat
           label="Performance score"
           value={view.score === null ? "—" : view.score.toFixed(1)}

@@ -53,7 +53,8 @@ create or replace function public.admin_update_member(
   p_role text default null,
   p_manager uuid default null,
   p_clear_manager boolean default false,
-  p_active boolean default null
+  p_active boolean default null,
+  p_tracked boolean default null
 )
 returns void
 language plpgsql
@@ -87,6 +88,7 @@ begin
   update public.organization_members
   set role = coalesce(p_role, role),
       active = coalesce(p_active, active),
+      performance_tracked = coalesce(p_tracked, performance_tracked),
       manager_user_id = case when p_clear_manager then null else coalesce(p_manager, manager_user_id) end
   where user_id = p_user and organization_id = v_org;
 
@@ -99,6 +101,6 @@ end;
 $$;
 
 revoke all on function public.admin_add_member(uuid, text, uuid) from public, anon;
-revoke all on function public.admin_update_member(uuid, text, uuid, boolean, boolean) from public, anon;
+revoke all on function public.admin_update_member(uuid, text, uuid, boolean, boolean, boolean) from public, anon;
 grant execute on function public.admin_add_member(uuid, text, uuid) to authenticated;
-grant execute on function public.admin_update_member(uuid, text, uuid, boolean, boolean) to authenticated;
+grant execute on function public.admin_update_member(uuid, text, uuid, boolean, boolean, boolean) to authenticated;

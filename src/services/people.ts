@@ -5,13 +5,17 @@ export type Person = ProfileRow & {
   role: Role | null;
   manager_user_id: string | null;
   active: boolean;
+  tracked: boolean;
 };
 
 /** Everyone the caller may see (their reporting line plus own manager). */
 export async function listDirectory(): Promise<Person[]> {
   const [profiles, members] = await Promise.all([
     db().from("profiles").select("id, full_name, email").limit(1000),
-    db().from("organization_members").select("user_id, role, manager_user_id, active").limit(1000),
+    db()
+      .from("organization_members")
+      .select("user_id, role, manager_user_id, active, performance_tracked")
+      .limit(1000),
   ]);
   const byUser = new Map((unwrap(members) as MemberRow[]).map((m) => [m.user_id, m]));
   return (unwrap(profiles) as ProfileRow[])
@@ -22,6 +26,7 @@ export async function listDirectory(): Promise<Person[]> {
         role: m?.role ?? null,
         manager_user_id: m?.manager_user_id ?? null,
         active: m?.active ?? false,
+        tracked: m?.performance_tracked ?? true,
       };
     })
     .sort((a, b) => displayName(a).localeCompare(displayName(b)));
@@ -38,6 +43,7 @@ export async function adminUpdateMember(args: {
   managerId?: string | null;
   clearManager?: boolean;
   active?: boolean;
+  tracked?: boolean;
 }): Promise<void> {
   unwrap(
     await db().rpc("admin_update_member", {
@@ -46,6 +52,7 @@ export async function adminUpdateMember(args: {
       p_manager: args.managerId ?? null,
       p_clear_manager: args.clearManager ?? false,
       p_active: args.active ?? null,
+      p_tracked: args.tracked ?? null,
     }),
   );
 }

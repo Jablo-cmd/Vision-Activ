@@ -3,7 +3,9 @@
 -- there was no team concept and no admin path for membership.
 
 alter table public.organization_members
-  add column if not exists manager_user_id uuid references auth.users (id) on delete set null;
+  add column if not exists manager_user_id uuid references auth.users (id) on delete set null,
+  -- Administrators and service accounts may be members without taking part in performance tracking.
+  add column if not exists performance_tracked boolean not null default true;
 
 alter table public.organization_members
   drop constraint if exists organization_members_no_self_manager;

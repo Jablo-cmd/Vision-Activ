@@ -1,7 +1,7 @@
 -- Server-side reporting is correct and respects reporting lines (audit refs C1, C9, C10).
 begin;
 \i supabase/tests/helpers.sql
-select plan(17);
+select plan(22);
 select tests.seed();
 
 update public.organization_members set created_at = now() - interval '90 days';
@@ -66,6 +66,19 @@ select results_eq($$select score_after is null, delta is null from public.report
   $$values (true, true)$$, 'no later assessment means no claimed improvement');
 select tests.as_user(4);
 select is((select count(*)::int from public.report_commitment_outcomes()), 0, 'another manager sees no outcomes from this team');
+
+-- Members who are not part of performance tracking (e.g. administrators) are neither counted nor flagged -----------
+select tests.as_owner();
+update public.organization_members set performance_tracked = false where user_id = tests.uid(1);
+select tests.as_user(2);
+select results_eq($$select submitted, expected from public.report_submission_rate((select cur from wk) - 7, (select cur from wk) - 7)$$,
+  $$values (4, 6)$$, 'untracked members are excluded from the expected submissions (4 of 6)');
+select is((select tracked from public.report_member_status() where user_id = tests.uid(1)), false, 'member status exposes the tracked flag');
+select is((select missed_last_4 from public.report_member_status() where user_id = tests.uid(1)), 0, 'an untracked member is never counted as missing submissions');
+select tests.as_user(1);
+select lives_ok($$select public.admin_update_member(tests.uid(6), null, null, false, null, false)$$, 'an administrator can exclude someone from tracking');
+select tests.as_owner();
+select is((select performance_tracked from public.organization_members where user_id = tests.uid(6)), false, 'the change is stored');
 
 select * from finish();
 rollback;

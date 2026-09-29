@@ -123,7 +123,7 @@ export function Dashboard() {
     .sort((a, b) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"))
     .slice(0, 4);
   const withOpen = new Set(open.map((c) => c.dimension_id));
-  const focus = weakestDimensions(latest, 3);
+  const focus = weakestDimensions(latest, 3).filter((f) => f.score <= 3);
   const unread = notifications.data?.filter((n) => !n.read_at) ?? [];
 
   return (
@@ -173,7 +173,7 @@ export function Dashboard() {
         </Link>
       </Card>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
         <Stat
           label="Current score"
           value={latestScore === null ? "—" : latestScore.toFixed(1)}
@@ -200,7 +200,7 @@ export function Dashboard() {
         <Card className="p-5">
           <SectionTitle>Focus areas</SectionTitle>
           <p className="mt-1 text-sm text-ink-500">
-            Your lowest-scoring dimensions in your latest assessment.
+            Your lowest-scoring dimensions (3 or below) in your latest assessment.
           </p>
           {focus.length === 0 ? (
             <p className="mt-3 text-sm text-ink-500">

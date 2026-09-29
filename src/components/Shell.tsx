@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { LogOut, Menu, X } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { ROLE_LABEL } from "../domain";
 import { navFor } from "./nav";
 import { NotificationBell } from "./NotificationBell";
 import { useProfileName } from "../hooks/useProfileName";
@@ -90,7 +91,7 @@ export function Shell({ children }: { children: ReactNode }) {
           <Brand />
           <NavList />
           <p className="border-t border-white/15 px-5 py-3 text-xs text-brand-100">
-            Signed in as {role}
+            Signed in as {role ? ROLE_LABEL[role] : ""}
           </p>
         </div>
       </aside>
@@ -142,7 +143,7 @@ export function Shell({ children }: { children: ReactNode }) {
             <NotificationBell />
             <div className="hidden text-right leading-tight sm:block">
               <p className="text-sm font-semibold text-ink-900">{name ?? user?.email}</p>
-              <p className="text-xs capitalize text-ink-500">{role}</p>
+              <p className="text-xs text-ink-500">{role ? ROLE_LABEL[role] : ""}</p>
             </div>
             <button
               type="button"

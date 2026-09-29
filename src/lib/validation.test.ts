@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DIMENSION_WORKFLOWS } from "../framework";
 import {
+  buildBaselinePayload,
   buildWeeklyPayload,
   completedDimensions,
   emptyWeeklyDraft,
@@ -69,6 +70,20 @@ describe("baseline validation", () => {
     expect(
       validateBaseline({ ratings: { ...ratings, "results-delivery": 6 }, evidence: {} }),
     ).toMatch(/1 remaining/);
+  });
+});
+
+describe("baseline payload", () => {
+  it("contains all twelve dimensions with trimmed evidence", () => {
+    const ratings = Object.fromEntries(DIMENSION_WORKFLOWS.map((d) => [d.id, 3]));
+    const payload = buildBaselinePayload({ ratings, evidence: { "results-delivery": "  good  " } });
+    expect(payload).toHaveLength(12);
+    expect(payload.find((p) => p.dimensionId === "results-delivery")).toEqual({
+      dimensionId: "results-delivery",
+      score: 3,
+      evidence: "good",
+    });
+    expect(payload.find((p) => p.dimensionId === "capability-skills")!.evidence).toBe("");
   });
 });
 

@@ -5,6 +5,13 @@ export type Role = "employee" | "manager" | "ceo" | "admin";
 export const MANAGEMENT_ROLES: readonly Role[] = ["manager", "ceo", "admin"];
 export const EXECUTIVE_ROLES: readonly Role[] = ["ceo", "admin"];
 
+export const ROLE_LABEL: Record<Role, string> = {
+  employee: "Employee",
+  manager: "Manager",
+  ceo: "CEO",
+  admin: "Administrator",
+};
+
 export type ScoreItem = { dimensionId: string; score: number; evidence: string };
 export type AssessmentType = "baseline" | "weekly";
 
@@ -134,6 +141,7 @@ export type MemberRow = {
   role: Role;
   manager_user_id: string | null;
   active: boolean;
+  performance_tracked: boolean;
 };
 export type Membership = { organization_id: string; role: Role; manager_user_id: string | null };
 
@@ -176,6 +184,7 @@ export type MemberStatus = {
   role: Role;
   manager_user_id: string | null;
   active: boolean;
+  tracked: boolean;
   latest_week: string | null;
   latest_score: number | null;
   previous_score: number | null;

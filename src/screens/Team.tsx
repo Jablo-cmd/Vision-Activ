@@ -14,6 +14,7 @@ import {
   Th,
 } from "../components/ui";
 import { useAuth } from "../context/AuthContext";
+import { ROLE_LABEL } from "../domain";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useMemberStatus } from "../hooks/useOrgData";
 import { attentionReasons, movement } from "../lib/metrics";
@@ -103,8 +104,8 @@ export function Team() {
                   >
                     {m.full_name || m.email}
                   </Link>
-                  <p className="text-xs capitalize text-ink-500">
-                    {m.role}
+                  <p className="text-xs text-ink-500">
+                    {ROLE_LABEL[m.role]}
                     {m.active ? "" : " · deactivated"}
                   </p>
                 </Td>
@@ -115,7 +116,9 @@ export function Team() {
                   <DeltaChip delta={movement(m.latest_score, m.previous_score)} />
                 </Td>
                 <Td>
-                  {m.submitted_current ? (
+                  {!m.tracked ? (
+                    <Badge>Not tracked</Badge>
+                  ) : m.submitted_current ? (
                     <Badge tone="ok">Submitted</Badge>
                   ) : (
                     <Badge tone="warn">Not yet</Badge>
