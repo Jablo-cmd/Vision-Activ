@@ -88,7 +88,7 @@ export function PageHeader({
   return (
     <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-ink-900 md:text-3xl">{title}</h1>
+        <h1 className="text-3xl text-ink-900 md:text-[2.5rem]">{title}</h1>
         {subtitle && <p className="mt-1 max-w-3xl text-sm text-ink-500 md:text-base">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -99,7 +99,7 @@ export function PageHeader({
 export function SectionTitle({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <h2 className="text-lg font-semibold text-ink-900">{children}</h2>
+      <h2 className="text-xl text-ink-900">{children}</h2>
       {aside}
     </div>
   );
@@ -231,7 +231,9 @@ export function Stat({
   return (
     <Card className="p-4">
       <p className="text-sm font-medium text-ink-500">{label}</p>
-      <p className={cx("mt-1 text-3xl font-bold tabular-nums", valueColor)}>{value}</p>
+      <p className={cx("mt-1 font-display text-4xl font-semibold tabular-nums", valueColor)}>
+        {value}
+      </p>
       {hint && <p className="mt-1 text-xs text-ink-500">{hint}</p>}
     </Card>
   );

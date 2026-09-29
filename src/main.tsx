@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import "@fontsource-variable/inter";
+import "@fontsource-variable/fraunces";
 import "./index.css";
 import { initMonitoring } from "./services/monitoring";
 

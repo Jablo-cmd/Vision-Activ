@@ -18,7 +18,7 @@ function AuthLayout({
     <div className="grid min-h-screen place-items-center bg-gradient-to-br from-brand-900 via-brand-800 to-brand-600 p-5">
       <Card className="w-full max-w-md p-8">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-700">Vision Activ</p>
-        <h1 className="mt-2 text-2xl font-bold text-ink-900">{title}</h1>
+        <h1 className="mt-2 text-3xl text-ink-900">{title}</h1>
         <p className="mt-1 text-sm text-ink-500">{subtitle}</p>
         <div className="mt-6">{children}</div>
       </Card>
