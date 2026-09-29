@@ -206,17 +206,25 @@ test("VERIFY: a manager cannot verify without accepted evidence; then verifies a
   await expect(verify).toBeDisabled();
   await expect(mgr.getByText("Accept at least one piece of evidence")).toBeVisible();
 
-  // The manager can open the private file through a short-lived signed link. Assert on the bytes served
-  // rather than on rendering, which differs between headless browsers (PDFs download instead of load).
-  const [popup] = await Promise.all([
-    mgr.waitForEvent("popup"),
-    mgr.getByRole("button", { name: /close-report\.pdf/ }).click(),
-  ]);
-  await popup.waitForURL(/\/storage\/v1\/object\/sign\/evidence\//, { waitUntil: "commit" });
-  const signed = await mgr.request.get(popup.url());
+  // The manager can open the private file through a short-lived signed link. Browsers differ in how they
+  // handle a PDF opened in a new tab (headless Chromium downloads it), so capture the URL the app asks
+  // to open and fetch it directly: this checks the storage policy and the bytes, not the browser.
+  await mgr.evaluate(() => {
+    const w = window as unknown as { __opened: string | null };
+    w.__opened = null;
+    window.open = (url) => {
+      w.__opened = String(url);
+      return null;
+    };
+  });
+  await mgr.getByRole("button", { name: /close-report\.pdf/ }).click();
+  await expect
+    .poll(() => mgr.evaluate(() => (window as unknown as { __opened: string | null }).__opened))
+    .toContain("/storage/v1/object/sign/evidence/");
+  const opened = await mgr.evaluate(() => (window as unknown as { __opened: string }).__opened);
+  const signed = await mgr.request.get(opened);
   expect(signed.status()).toBe(200);
   expect(await signed.text()).toContain("%PDF-1.4 close report");
-  await popup.close();
 
   // Rejecting evidence needs a reason
   const link = mgr.locator("li", { hasText: "Dashboard" });
