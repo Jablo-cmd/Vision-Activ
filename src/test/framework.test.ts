@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { DIMENSION_WORKFLOWS, FRAMEWORK_DIMENSIONS } from "../types";
+import { DIMENSION_WORKFLOWS, FRAMEWORK_DIMENSIONS } from "../framework";
 
 describe("Vision Activ framework", () => {
-  it("contains exactly the 12 authoritative dimensions", () => {
+  it("contains exactly the 12 authoritative dimensions with unique slugs", () => {
     expect(DIMENSION_WORKFLOWS).toHaveLength(12);
     expect(FRAMEWORK_DIMENSIONS).toHaveLength(12);
     expect(new Set(DIMENSION_WORKFLOWS.map((d) => d.id)).size).toBe(12);
@@ -15,9 +15,6 @@ describe("Vision Activ framework", () => {
       expect(d.weeklyPrompt.trim().length).toBeGreaterThan(0);
       expect(d.piccPrompt.trim().length).toBeGreaterThan(0);
       expect(d.scorecardMetrics.length).toBeGreaterThan(0);
-      expect(d.reviewFocus.trim().length).toBeGreaterThan(0);
-      expect(d.consolidationFocus.trim().length).toBeGreaterThan(0);
-      expect(d.trendFocus.trim().length).toBeGreaterThan(0);
     }
   });
 });

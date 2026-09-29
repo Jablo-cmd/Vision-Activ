@@ -1,169 +1,194 @@
-import { BarChart, Bar, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { useEffect, useMemo, useState } from "react";
-import { Card } from "../components/ui";
-import { DIMENSION_WORKFLOWS } from "../types";
-import { getMyAssessments } from "../services/data";
+import { useMemo, useState } from "react";
+import { TrendChart } from "../components/TrendChart";
+import { DeltaChip, ScoreValue, dimensionName } from "../components/domain";
+import {
+  Alert,
+  Card,
+  EmptyState,
+  PageHeader,
+  SectionTitle,
+  Select,
+  Spinner,
+  Field,
+  TableWrap,
+  Td,
+  Th,
+} from "../components/ui";
+import { DIMENSION_WORKFLOWS } from "../framework";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { useAssessments, useUserId } from "../hooks/queries";
+import { addDays, formatDay, orgToday, weekStart } from "../lib/dates";
+import { GRAINS, assessmentsToRows, movement, trendSeries, type Grain } from "../lib/metrics";
+import { errorText } from "../services/supabase";
 
-type RangeKey = "week" | "fortnight" | "month" | "quarter" | "halfYear";
-const RANGES: [RangeKey, string][] = [
-  ["week", "Weekly"],
-  ["fortnight", "Fortnightly"],
-  ["month", "Monthly"],
-  ["quarter", "3 Months"],
-  ["halfYear", "6 Months"],
+const LOOKBACK = [
+  { weeks: 13, label: "Last 3 months" },
+  { weeks: 26, label: "Last 6 months" },
+  { weeks: 52, label: "Last 12 months" },
 ];
 
-function bucketStart(date: string, key: RangeKey) {
-  const d = new Date(date + "T00:00:00");
-  if (key === "week") {
-    const day = d.getDay();
-    d.setDate(d.getDate() - ((day + 6) % 7));
-  } else if (key === "fortnight") {
-    const day = d.getDay();
-    d.setDate(d.getDate() - ((day + 6) % 7));
-    const week = Math.floor((d.getTime() - new Date(1970, 0, 5).getTime()) / (14 * 86400000));
-    d.setDate(5 + week * 14);
-  } else if (key === "month") {
-    d.setDate(1);
-  } else if (key === "quarter") {
-    d.setMonth(Math.floor(d.getMonth() / 3) * 3, 1);
-  } else {
-    d.setMonth(d.getMonth() - 5, 1);
-  }
-  return d.toISOString().slice(0, 10);
-}
-
 export function Trends() {
-  const [data, setData] = useState<Awaited<ReturnType<typeof getMyAssessments>>>([]);
-  const [error, setError] = useState("");
-  const [range, setRange] = useState<RangeKey>("week");
-  useEffect(() => {
-    getMyAssessments(180)
-      .then(setData)
-      .catch((e) => setError(e instanceof Error ? e.message : "Unable to load trends."));
-  }, []);
-  const rows = useMemo(() => {
-    const cutoff = new Date();
-    cutoff.setDate(
-      cutoff.getDate() -
-        (range === "week"
-          ? 7
-          : range === "fortnight"
-            ? 14
-            : range === "month"
-              ? 31
-              : range === "quarter"
-                ? 92
-                : 184),
-    );
-    const grouped = new Map<string, { sum: number; count: number }>();
-    (data ?? [])
-      .filter(
-        (a) => a.assessment_type === "weekly" && new Date(a.period_start + "T00:00:00") >= cutoff,
-      )
-      .forEach((a) => {
-        const scores = Array.isArray(a.scores) ? a.scores : [];
-        const rated = scores.filter(
-          (x: { score?: number }) => typeof x.score === "number" && x.score > 0,
-        );
-        if (!rated.length) return;
-        const key = bucketStart(a.period_start, range);
-        const current = grouped.get(key) ?? { sum: 0, count: 0 };
-        current.sum +=
-          rated.reduce((n: number, x: { score: number }) => n + x.score, 0) / rated.length;
-        current.count++;
-        grouped.set(key, current);
-      });
-    return Array.from(grouped.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([period, v]) => ({ period, score: Number((v.sum / v.count).toFixed(2)) }));
-  }, [data, range]);
-  const weekly = (data ?? []).filter((a) => a.assessment_type === "weekly");
-  const latest = weekly[0];
-  const previous = weekly[1];
-  const latestScores = Array.isArray(latest?.scores) ? latest.scores : [];
-  const previousScores = Array.isArray(previous?.scores) ? previous.scores : [];
-  const movement = DIMENSION_WORKFLOWS.map((d) => {
-    const a = latestScores.find((x: { dimensionId: string }) => x.dimensionId === d.id)?.score ?? 0;
-    const b =
-      previousScores.find((x: { dimensionId: string }) => x.dimensionId === d.id)?.score ?? 0;
-    return { ...d, score: a, delta: a - b };
-  });
+  useDocumentTitle("Trends");
+  const userId = useUserId();
+  const assessments = useAssessments(userId);
+  const [grain, setGrain] = useState<Grain>("week");
+  const [weeks, setWeeks] = useState(26);
+
+  const data = assessments.data;
+  const rows = useMemo(() => assessmentsToRows(data ?? []), [data]);
+  const cutoff = addDays(weekStart(orgToday()), -7 * (weeks - 1));
+  const inRange = rows.filter((r) => r.week_start >= cutoff);
+  const points = useMemo(() => trendSeries(inRange, grain), [inRange, grain]);
+
+  if (assessments.isPending) return <Spinner />;
+  if (assessments.isError) return <Alert tone="error">{errorText(assessments.error)}</Alert>;
+
+  const weekly = data!.filter((a) => a.assessment_type === "weekly");
+  const baseline = data!.find((a) => a.assessment_type === "baseline") ?? null;
+  const latest = weekly[0] ?? null;
+  const previous = weekly[1] ?? null;
+
+  const heatWeeks = weekly.slice(0, 8).reverse();
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-[#2563EB]">Trend Analysis</h1>
-        <p className="mt-2 text-[#64748B]">
-          Review performance across weekly, fortnightly, monthly, 3-month and 6-month horizons.
-        </p>
-      </div>
-      {error && <Card className="border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</Card>}
-      <Card className="p-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="font-bold text-[#173B6C]">Performance trend</h2>
-            <p className="mt-1 text-xs text-[#64748B]">
-              Weekly assessments are consolidated into the selected reporting period.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Trend period">
-            <span className="sr-only">View:</span>
-            {RANGES.map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setRange(key)}
-                aria-pressed={range === key}
-                className={
-                  "rounded-xl border px-3 py-2 text-sm font-semibold transition " +
-                  (range === key
-                    ? "border-[#2563EB] bg-[#2563EB] text-white"
-                    : "border-slate-200 bg-white text-[#2563EB] hover:border-[#2563EB]")
-                }
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-        {rows.length ? (
-          <div className="mt-6 h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={rows}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="period" />
-                <YAxis domain={[0, 5]} />
-                <Tooltip />
-                <Bar dataKey="score" fill="#60A5FA" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <p className="mt-6 text-sm text-[#64748B]">
-            No weekly assessments are available for this period.
-          </p>
-        )}
-      </Card>
-      <Card className="p-6">
-        <h2 className="font-bold text-[#173B6C]">Dimension movement</h2>
-        <p className="mt-1 text-xs text-[#64748B]">
-          Latest weekly assessment compared with the previous submitted week.
-        </p>
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          {movement.map((d) => (
-            <div key={d.id} className="rounded-xl border border-slate-100 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <span className="font-semibold text-[#2563EB]">{d.name}</span>
-                <span className="text-sm font-bold">{d.score ? d.score.toFixed(1) : "—"}</span>
+      <PageHeader
+        title="My trends"
+        subtitle="How your self-assessed performance has moved over time, and where it is moving fastest."
+      />
+
+      {weekly.length === 0 ? (
+        <EmptyState title="No weekly scorecards yet">
+          Submit your first weekly scorecard to start your trend line.
+        </EmptyState>
+      ) : (
+        <>
+          <Card className="p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <SectionTitle>Overall score</SectionTitle>
+              <div className="flex gap-3">
+                <Field label="Show">
+                  {(p) => (
+                    <Select {...p} value={weeks} onChange={(e) => setWeeks(Number(e.target.value))}>
+                      {LOOKBACK.map((l) => (
+                        <option key={l.weeks} value={l.weeks}>
+                          {l.label}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                </Field>
+                <Field label="Group by">
+                  {(p) => (
+                    <Select
+                      {...p}
+                      value={grain}
+                      onChange={(e) => setGrain(e.target.value as Grain)}
+                    >
+                      {GRAINS.map((g) => (
+                        <option key={g.key} value={g.key}>
+                          {g.label}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                </Field>
               </div>
-              <p className="mt-1 text-xs text-[#64748B]">
-                {d.delta > 0 ? "Improving" : d.delta < 0 ? "Declining" : "Stable"}
-                {d.delta !== 0 ? " (" + (d.delta > 0 ? "+" : "") + d.delta.toFixed(1) + ")" : ""}
-              </p>
             </div>
-          ))}
-        </div>
-      </Card>
+            <div className="mt-4">
+              {points.length < 2 ? (
+                <p className="text-sm text-ink-500">
+                  A trend needs at least two periods with data. Keep submitting weekly — you have{" "}
+                  {points.length} so far in this view.
+                </p>
+              ) : null}
+              {points.length > 0 && (
+                <TrendChart points={points} grain={grain} title="My overall score over time" />
+              )}
+            </div>
+          </Card>
+
+          <Card className="p-5">
+            <SectionTitle>Dimension movement</SectionTitle>
+            <p className="mt-1 text-sm text-ink-500">
+              Latest week{latest ? ` (${formatDay(latest.period_start)})` : ""} compared with the
+              previous submitted week and with your baseline.
+              {!previous && " Movement appears after your second weekly scorecard."}
+            </p>
+            <div className="mt-3">
+              <TableWrap label="Dimension movement">
+                <thead>
+                  <tr>
+                    <Th>Dimension</Th>
+                    <Th>Baseline</Th>
+                    <Th>Previous</Th>
+                    <Th>Latest</Th>
+                    <Th>Change</Th>
+                    <Th>Since baseline</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {DIMENSION_WORKFLOWS.map((d) => {
+                    const b = baseline?.scores.find((s) => s.dimensionId === d.id)?.score ?? null;
+                    const p = previous?.scores.find((s) => s.dimensionId === d.id)?.score ?? null;
+                    const l = latest?.scores.find((s) => s.dimensionId === d.id)?.score ?? null;
+                    return (
+                      <tr key={d.id}>
+                        <Td className="font-medium text-ink-900">{d.name}</Td>
+                        <Td>
+                          <ScoreValue score={b} />
+                        </Td>
+                        <Td>
+                          <ScoreValue score={p} />
+                        </Td>
+                        <Td>
+                          <ScoreValue score={l} />
+                        </Td>
+                        <Td>
+                          <DeltaChip delta={movement(l, p)} />
+                        </Td>
+                        <Td>
+                          <DeltaChip delta={movement(l, b)} />
+                        </Td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </TableWrap>
+            </div>
+          </Card>
+
+          <Card className="p-5">
+            <SectionTitle>Last {heatWeeks.length} weeks by dimension</SectionTitle>
+            <div className="mt-3">
+              <TableWrap label="Weekly scores by dimension">
+                <thead>
+                  <tr>
+                    <Th>Dimension</Th>
+                    {heatWeeks.map((w) => (
+                      <Th key={w.id}>{formatDay(w.period_start)}</Th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {DIMENSION_WORKFLOWS.map((d) => (
+                    <tr key={d.id}>
+                      <Td className="font-medium text-ink-900">{dimensionName(d.id)}</Td>
+                      {heatWeeks.map((w) => (
+                        <Td key={w.id}>
+                          <ScoreValue
+                            score={w.scores.find((s) => s.dimensionId === d.id)?.score ?? null}
+                          />
+                        </Td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </TableWrap>
+            </div>
+          </Card>
+        </>
+      )}
     </div>
   );
 }

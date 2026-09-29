@@ -1,4 +1,3 @@
-export type WorkflowMetricKind = "count" | "hours" | "percentage" | "score" | "text";
 export type DimensionWorkflow = {
   id: string;
   name: string;
@@ -9,50 +8,12 @@ export type DimensionWorkflow = {
   consolidationFocus: string;
   trendFocus: string;
 };
-export type AssessmentScore = { dimensionId: string; score: number; evidence: string };
-export type Assessment = {
-  id: string;
-  userId: string;
-  type: "baseline" | "weekly";
-  periodStart: string;
-  periodEnd: string;
-  scores: AssessmentScore[];
-  submittedAt?: string;
-};
-export type Commitment = {
-  id: string;
-  dimensionId: string;
-  title: string;
-  action: string;
-  timeframe: string;
-  evidence: string;
-  status: "not_started" | "in_progress" | "complete";
-  dueDate?: string | null;
-  ownerUserId?: string | null;
-  baselineValue?: number | null;
-  targetValue?: number | null;
-  progressPercent?: number;
-  priority?: "low" | "normal" | "high" | "critical";
-  blocker?: string;
-  managerNotes?: string;
-  completedAt?: string | null;
-  createdAt?: string;
-  updatedAt?: string;
-};
-export type ScorecardEntry = {
-  id?: string;
-  dimensionId: string;
-  metrics: Record<string, number | string>;
-  evidence: string;
-};
-export type Review = {
-  id: string;
-  assessmentId: string;
-  notes: string;
-  barriers: string;
-  support: string;
-  reviewedAt: string;
-};
+
+/**
+ * Framework content. The slug `id` is the foreign key used by the database
+ * (framework_dimensions.slug) and the required scorecard metric names are
+ * enforced there too (framework_dimensions.scorecard_metrics).
+ */
 export const DIMENSION_WORKFLOWS: DimensionWorkflow[] = [
   {
     id: "accountability-ownership",

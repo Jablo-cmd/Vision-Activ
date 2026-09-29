@@ -1,109 +1,161 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "../services/supabase";
-export type Role = "employee" | "manager" | "ceo" | "admin";
+import type { Membership, Role } from "../domain";
+import { fetchMembership } from "../services/assessments";
+import { isConfigured, supabase } from "../services/supabase";
+
+export type AuthStatus =
+  "unconfigured" | "loading" | "signed_out" | "no_access" | "error" | "ready";
+
 type AuthContextValue = {
+  status: AuthStatus;
   session: Session | null;
   user: User | null;
   role: Role | null;
-  organizationId: string | null;
-  loading: boolean;
+  membership: Membership | null;
+  /** True after the user followed a password-recovery link. */
+  recovery: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  requestPasswordReset: (email: string) => Promise<void>;
+  updatePassword: (password: string) => Promise<void>;
+  retryMembership: () => void;
 };
+
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [session, setSession] = useState<Session | null>(null);
-  const [role, setRole] = useState<Role | null>(null);
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const loadMembership = async (user: User | null) => {
-    if (!user || !supabase) {
-      setRole(null);
-      setOrganizationId(null);
-      return;
-    }
-    const { data } = await supabase
-      .from("organization_members")
-      .select("organization_id,role")
-      .eq("user_id", user.id)
-      .eq("active", true)
-      .limit(1)
-      .maybeSingle();
-    setRole(data?.role ? (data.role as Role) : null);
-    setOrganizationId(data?.organization_id ?? null);
-  };
+  const [initialised, setInitialised] = useState(!isConfigured);
+  const [recovery, setRecovery] = useState(false);
+
   useEffect(() => {
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
-    let mounted = true;
+    if (!supabase) return;
+    let active = true;
     supabase.auth
       .getSession()
       .then(({ data }) => {
-        if (mounted) setSession(data.session);
+        if (active) setSession(data.session);
       })
-      .catch(() => {
-        if (mounted) setSession(null);
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) setInitialised(true);
       });
-    const { data } = supabase.auth.onAuthStateChange((_event, next) => {
-      if (mounted) setSession(next);
+    // Only set state in this callback: awaiting other Supabase calls here can deadlock the client.
+    const { data } = supabase.auth.onAuthStateChange((event, next) => {
+      if (event === "PASSWORD_RECOVERY") setRecovery(true);
+      if (event === "SIGNED_OUT") {
+        setRecovery(false);
+        queryClient.clear();
+      }
+      setSession(next);
     });
     return () => {
-      mounted = false;
+      active = false;
       data.subscription.unsubscribe();
     };
-  }, []);
-  useEffect(() => {
-    let mounted = true;
-    if (!session?.user) {
-      setRole(null);
-      setOrganizationId(null);
-      setLoading(false);
-      return;
+  }, [queryClient]);
+
+  const userId = session?.user.id;
+  const membershipQuery = useQuery({
+    queryKey: ["membership", userId],
+    queryFn: () => fetchMembership(userId!),
+    enabled: Boolean(userId),
+    staleTime: 5 * 60_000,
+    retry: 1,
+  });
+
+  let status: AuthStatus;
+  if (!isConfigured) status = "unconfigured";
+  else if (!initialised) status = "loading";
+  else if (!session) status = "signed_out";
+  else if (membershipQuery.isPending) status = "loading";
+  else if (membershipQuery.isError) status = "error";
+  else if (!membershipQuery.data) status = "no_access";
+  else status = "ready";
+
+  const signIn = useCallback(async (email: string, password: string) => {
+    if (!supabase) throw new Error("The application is not configured.");
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    if (error) {
+      // Do not reveal whether the account exists.
+      throw new Error(
+        error.status === 400
+          ? "The email or password is incorrect."
+          : "Sign-in failed. Please try again.",
+      );
     }
-    setLoading(true);
-    loadMembership(session.user)
-      .catch(() => {
-        if (mounted) {
-          setRole(null);
-          setOrganizationId(null);
-        }
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
-    return () => {
-      mounted = false;
-    };
-  }, [session?.user?.id]);
-  const signIn = async (email: string, password: string) => {
-    if (!supabase) throw new Error("Supabase is not configured.");
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-  };
-  const signOut = async () => {
+  }, []);
+
+  const signOut = useCallback(async () => {
     if (supabase) await supabase.auth.signOut();
-  };
-  return (
-    <AuthContext.Provider
-      value={{
-        session,
-        user: session?.user ?? null,
-        role,
-        organizationId,
-        loading,
-        signIn,
-        signOut,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+  }, []);
+
+  const requestPasswordReset = useCallback(async (email: string) => {
+    if (!supabase) throw new Error("The application is not configured.");
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error && error.status !== 400)
+      throw new Error("The reset email could not be sent. Please try again.");
+  }, []);
+
+  const updatePassword = useCallback(async (password: string) => {
+    if (!supabase) throw new Error("The application is not configured.");
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) throw new Error(error.message);
+    setRecovery(false);
+  }, []);
+
+  const retryMembership = useCallback(() => {
+    void membershipQuery.refetch();
+  }, [membershipQuery]);
+
+  const membership = membershipQuery.data ?? null;
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      status,
+      session,
+      user: session?.user ?? null,
+      role: membership?.role ?? null,
+      membership,
+      recovery,
+      signIn,
+      signOut,
+      requestPasswordReset,
+      updatePassword,
+      retryMembership,
+    }),
+    [
+      status,
+      session,
+      membership,
+      recovery,
+      signIn,
+      signOut,
+      requestPasswordReset,
+      updatePassword,
+      retryMembership,
+    ],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth must be used inside AuthProvider");
-  return context;
+
+export function useAuth(): AuthContextValue {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
+  return ctx;
 }
+
+export type { Role };

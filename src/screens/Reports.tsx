@@ -1,195 +1,229 @@
-import { Download, FileText } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { Button, Card } from "../components/ui";
-import { DIMENSION_WORKFLOWS } from "../types";
-import { getTeamAssessments, getTeamCommitments, getTeamMembers } from "../services/data";
-type RangeKey = "week" | "fortnight" | "month" | "quarter" | "halfYear";
-type Member = { user_id: string; role: string; profile?: { full_name: string; email: string } };
-const RANGES: [RangeKey, string][] = [
-  ["week", "Weekly"],
-  ["fortnight", "Fortnightly"],
-  ["month", "Monthly"],
-  ["quarter", "3 Months"],
-  ["halfYear", "6 Months"],
-];
-function cutoffDays(k: RangeKey) {
-  return k === "week"
-    ? 7
-    : k === "fortnight"
-      ? 14
-      : k === "month"
-        ? 31
-        : k === "quarter"
-          ? 92
-          : 184;
-}
-function inRange(date: string, k: RangeKey) {
-  const d = new Date(date + "T00:00:00");
-  const c = new Date();
-  c.setHours(0, 0, 0, 0);
-  c.setDate(c.getDate() - cutoffDays(k));
-  return d >= c;
-}
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Download, Printer } from "lucide-react";
+import { DeltaChip, ScoreValue } from "../components/domain";
+import {
+  Alert,
+  Button,
+  Card,
+  PageHeader,
+  SectionTitle,
+  Spinner,
+  Stat,
+  TableWrap,
+  Td,
+  Th,
+} from "../components/ui";
+import { DIMENSION_WORKFLOWS } from "../framework";
+import { useDocumentTitle } from "../hooks/useDocumentTitle";
+import { useSubmissionRates, useWeeklyScores } from "../hooks/useOrgData";
+import { addDays, formatDate, orgToday } from "../lib/dates";
+import {
+  PERIODS,
+  anchorWeek,
+  dimensionAverages,
+  movement,
+  overallScore,
+  periodWindow,
+  toCsv,
+  type Period,
+} from "../lib/metrics";
+import { countCommitments } from "../services/commitments";
+import { errorText } from "../services/supabase";
+
 export function Reports() {
-  const [assessments, setAssessments] = useState<Awaited<ReturnType<typeof getTeamAssessments>>>(
-    [],
-  );
-  const [commitments, setCommitments] = useState<Awaited<ReturnType<typeof getTeamCommitments>>>(
-    [],
-  );
-  const [members, setMembers] = useState<Member[]>([]);
-  const [range, setRange] = useState<RangeKey>("quarter");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  useEffect(() => {
-    Promise.all([getTeamAssessments(), getTeamCommitments(), getTeamMembers()])
-      .then(([a, c, m]) => {
-        setAssessments(a);
-        setCommitments(c);
-        setMembers(m as Member[]);
-      })
-      .catch((e) => setError(e instanceof Error ? e.message : "Unable to load report."));
-  }, []);
-  const filtered = useMemo(
-    () =>
-      assessments.filter((a) => a.assessment_type === "weekly" && inRange(a.period_start, range)),
-    [assessments, range],
-  );
-  const scores = filtered
-    .flatMap((a) => (Array.isArray(a.scores) ? a.scores : []))
-    .filter((x: { score?: number }) => typeof x.score === "number" && x.score > 0);
-  const average = scores.length
-    ? scores.reduce((n: number, x: { score: number }) => n + x.score, 0) / scores.length
-    : null;
-  const filteredCommitments = commitments.filter((c) =>
-    inRange((c.updated_at || c.created_at).slice(0, 10), range),
-  );
-  const completed = filteredCommitments.filter((c) => c.status === "complete").length;
-  const completion = filteredCommitments.length
-    ? Math.round((completed / filteredCommitments.length) * 100)
-    : 0;
-  const dimensionRows = DIMENSION_WORKFLOWS.map((d) => {
-    const xs = filtered
-      .flatMap((a) => (Array.isArray(a.scores) ? a.scores : []))
-      .filter(
-        (x: { dimensionId?: string; score?: number }) =>
-          x.dimensionId === d.id && typeof x.score === "number" && x.score > 0,
-      );
+  useDocumentTitle("Reports");
+  const [period, setPeriod] = useState<Period>("month");
+  const scores = useWeeklyScores();
+  const rates = useSubmissionRates();
+  const today = orgToday();
+
+  const view = useMemo(() => {
+    if (!scores.data) return null;
+    const anchor = anchorWeek(scores.data, today);
+    const cur = periodWindow(anchor, period);
+    const prev = periodWindow(anchor, period, 1);
+    const now = dimensionAverages(scores.data, cur);
+    const before = dimensionAverages(scores.data, prev);
     return {
-      name: d.name,
-      score: xs.length
-        ? Number(
-            (xs.reduce((n: number, x: { score: number }) => n + x.score, 0) / xs.length).toFixed(2),
-          )
-        : null,
+      cur,
+      prev,
+      now,
+      before,
+      overall: overallScore(now),
+      prevOverall: overallScore(before),
     };
+  }, [scores.data, period, today]);
+
+  const counts = useQuery({
+    queryKey: ["report-counts", view?.cur.start, view?.cur.end],
+    enabled: Boolean(view),
+    queryFn: async () => {
+      const from = view!.cur.start;
+      const before = addDays(view!.cur.end, 1);
+      const [created, completed, verified] = await Promise.all([
+        countCommitments({ createdFrom: from, createdBefore: before }),
+        countCommitments({ completedFrom: from, completedBefore: before }),
+        countCommitments({ verifiedFrom: from, verifiedBefore: before }),
+      ]);
+      return { created, completed, verified };
+    },
   });
-  const download = () => {
-    setBusy(true);
-    const rows = [
-      ["Dimension", "Average score"],
-      ...dimensionRows.map((d) => [d.name, d.score == null ? "" : String(d.score)]),
-      ["Overall average", average == null ? "" : average.toFixed(2)],
-      ["Assessments submitted", String(filtered.length)],
-      ["Commitments", String(filteredCommitments.length)],
-      ["Commitments completed", String(completed)],
-      ["Commitment completion", String(completion) + "%"],
+
+  if (scores.isPending) return <Spinner />;
+  if (scores.isError) return <Alert tone="error">{errorText(scores.error)}</Alert>;
+  if (!view) return null;
+
+  const windowRates = (rates.data ?? []).filter(
+    (r) => r.week_start >= view.cur.start && r.week_start <= view.cur.end,
+  );
+  const submitted = windowRates.reduce((n, r) => n + r.submitted, 0);
+  const expected = windowRates.reduce((n, r) => n + r.expected, 0);
+  const responses = view.now.reduce((n, a) => n + a.responses, 0);
+  const label = PERIODS.find((p) => p.key === period)!.label;
+
+  const exportCsv = () => {
+    const rows: (string | number | null)[][] = [
+      ["Vision Activ consolidated report"],
+      ["Period", label],
+      ["From", view.cur.start],
+      ["To", view.cur.end],
+      ["Generated", today],
+      [],
+      ["Dimension", "Average score", "Previous period", "Change", "Responses"],
+      ...DIMENSION_WORKFLOWS.map((d) => {
+        const n = view.now.find((x) => x.dimensionId === d.id)!;
+        const b = view.before.find((x) => x.dimensionId === d.id)!;
+        return [d.name, n.avg, b.avg, movement(n.avg, b.avg), n.responses];
+      }),
+      [],
+      [
+        "Overall score",
+        view.overall,
+        view.prevOverall,
+        movement(view.overall, view.prevOverall),
+        responses,
+      ],
+      ["Weekly submissions", submitted],
+      ["Expected submissions", expected],
+      ["Commitments created", counts.data?.created ?? null],
+      ["Commitments completed", counts.data?.completed ?? null],
+      ["Commitments verified", counts.data?.verified ?? null],
     ];
-    const csv = rows
-      .map((row) => row.map((v) => `"${String(v).replaceAll('"', '""')}"`).join(","))
-      .join("\n");
+    const blob = new Blob(["﻿" + toCsv(rows)], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    a.download = "vision-activ-consolidated-report.csv";
+    a.href = url;
+    a.download = `vision-activ-report-${period}-${view.cur.end}.csv`;
     a.click();
-    URL.revokeObjectURL(a.href);
-    setTimeout(() => setBusy(false), 0);
+    URL.revokeObjectURL(url);
   };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-[#2563EB]">Management Reporting</h1>
-        <p className="mt-2 text-[#64748B]">
-          Leadership reporting across the selected operating horizon.
-        </p>
-      </div>
-      {error && <Card className="border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</Card>}
-      <Card className="p-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 className="font-bold text-[#173B6C]">Reporting horizon</h2>
-            <p className="mt-1 text-xs text-[#64748B]">
-              Submitted weekly assessments are consolidated into the selected period.
-            </p>
+      <PageHeader
+        title="Reports"
+        subtitle={`${label} consolidation: ${formatDate(view.cur.start)} to ${formatDate(view.cur.end)}, compared with the previous ${view.cur.weeks} week(s).`}
+        actions={
+          <div className="no-print flex gap-2">
+            <Button variant="secondary" onClick={() => window.print()}>
+              <Printer size={16} aria-hidden="true" /> Print
+            </Button>
+            <Button onClick={exportCsv}>
+              <Download size={16} aria-hidden="true" /> Export CSV
+            </Button>
           </div>
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Report period">
-            {RANGES.map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setRange(key)}
-                aria-pressed={range === key}
-                className={
-                  "rounded-xl border px-3 py-2 text-sm font-semibold " +
-                  (range === key
-                    ? "border-[#2563EB] bg-[#2563EB] text-white"
-                    : "border-slate-200 bg-white text-[#2563EB] hover:border-[#2563EB]")
-                }
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </Card>
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="p-6">
-          <FileText className="text-[#60A5FA]" />
-          <p className="mt-4 text-sm text-[#64748B]">Average score</p>
-          <p className="text-3xl font-bold text-[#2563EB]">
-            {average == null ? "—" : average.toFixed(1) + " / 5"}
-          </p>
-        </Card>
-        <Card className="p-6">
-          <p className="text-sm text-[#64748B]">Team members</p>
-          <p className="mt-4 text-3xl font-bold text-[#2563EB]">{members.length}</p>
-        </Card>
-        <Card className="p-6">
-          <p className="text-sm text-[#64748B]">Commitment completion</p>
-          <p className="mt-4 text-3xl font-bold text-[#2563EB]">{completion}%</p>
-        </Card>
-        <Card className="p-6">
-          <p className="text-sm text-[#64748B]">Assessments submitted</p>
-          <p className="mt-4 text-3xl font-bold text-[#2563EB]">{filtered.length}</p>
-        </Card>
-      </div>
-      <Card className="p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="font-bold text-[#173B6C]">Dimension averages</h2>
-            <p className="mt-1 text-xs text-[#64748B]">
-              Calculated only from submitted scores in the selected horizon.
-            </p>
-          </div>
-          <Button
-            disabled={busy}
-            onClick={download}
-            className="bg-[#2563EB] text-white hover:bg-[#2563EB]"
+        }
+      />
+
+      <div role="group" aria-label="Reporting period" className="no-print flex flex-wrap gap-2">
+        {PERIODS.map((p) => (
+          <button
+            key={p.key}
+            type="button"
+            aria-pressed={period === p.key}
+            onClick={() => setPeriod(p.key)}
+            className={
+              "rounded-lg border px-3 py-1.5 text-sm font-semibold " +
+              (period === p.key
+                ? "border-brand-700 bg-brand-700 text-white"
+                : "border-line bg-white text-brand-800 hover:bg-brand-50")
+            }
           >
-            <Download size={16} className="mr-2 inline" />
-            Export
-          </Button>
-        </div>
-        <div className="mt-5 grid gap-3 md:grid-cols-2">
-          {dimensionRows.map((d) => (
-            <div
-              key={d.name}
-              className="flex items-center justify-between rounded-xl border border-slate-100 p-3"
-            >
-              <span className="text-sm text-[#2563EB]">{d.name}</span>
-              <strong>{d.score == null ? "—" : d.score.toFixed(1) + "/5"}</strong>
-            </div>
-          ))}
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Stat
+          label="Overall score"
+          value={view.overall === null ? "—" : view.overall.toFixed(1)}
+          tone="brand"
+          hint={
+            <span className="inline-flex items-center gap-1">
+              vs previous <DeltaChip delta={movement(view.overall, view.prevOverall)} />
+            </span>
+          }
+        />
+        <Stat
+          label="Weekly submissions"
+          value={expected ? `${submitted}/${expected}` : submitted}
+          hint={
+            expected ? `${Math.round((submitted / expected) * 100)}% submission rate` : undefined
+          }
+        />
+        <Stat
+          label="Commitments completed"
+          value={counts.data?.completed ?? "—"}
+          hint={
+            counts.data
+              ? `${counts.data.created} created · ${counts.data.verified} verified`
+              : undefined
+          }
+        />
+        <Stat label="Scored responses" value={responses} />
+      </div>
+
+      <Card className="p-5">
+        <SectionTitle>Dimension averages</SectionTitle>
+        <p className="mt-1 text-sm text-ink-500">
+          Weighted by number of responses. A dash means no one was scored on that dimension in the
+          period.
+        </p>
+        <div className="mt-3">
+          <TableWrap label="Dimension averages">
+            <thead>
+              <tr>
+                <Th>Dimension</Th>
+                <Th>This period</Th>
+                <Th>Previous</Th>
+                <Th>Change</Th>
+                <Th>Responses</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {DIMENSION_WORKFLOWS.map((d) => {
+                const n = view.now.find((x) => x.dimensionId === d.id)!;
+                const b = view.before.find((x) => x.dimensionId === d.id)!;
+                return (
+                  <tr key={d.id}>
+                    <Td className="font-medium text-ink-900">{d.name}</Td>
+                    <Td>
+                      <ScoreValue score={n.avg} />
+                    </Td>
+                    <Td>
+                      <ScoreValue score={b.avg} />
+                    </Td>
+                    <Td>
+                      <DeltaChip delta={movement(n.avg, b.avg)} />
+                    </Td>
+                    <Td className="tabular-nums">{n.responses}</Td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </TableWrap>
         </div>
       </Card>
     </div>

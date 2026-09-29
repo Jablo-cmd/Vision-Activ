@@ -1,121 +1,114 @@
-import { useState } from "react";
-import { Bell, LogOut, Menu, Search, X } from "lucide-react";
-import { Sidebar } from "./components/Sidebar";
-import { Dashboard } from "./screens/Dashboard";
-import { Assessment } from "./screens/Assessment";
-import { Commitments } from "./screens/Commitments";
-import { Review } from "./screens/Review";
-import { Trends } from "./screens/Trends";
-import { Reports } from "./screens/Reports";
-import { Scorecard } from "./screens/Scorecard";
-import { Track } from "./screens/Track";
-import { AuthProvider, useAuth } from "./context/AuthContext";
-import { Login } from "./screens/Login";
+import { lazy, Suspense } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { ErrorBoundary } from "./components/ErrorBoundary";
-type Page =
-  "dashboard" | "baseline" | "commitments" | "weekly" | "track" | "review" | "trends" | "reports";
-function Workspace() {
-  const { user, role, loading, signOut } = useAuth();
-  const [page, setPage] = useState<Page>("dashboard");
-  const [mobileOpen, setMobileOpen] = useState(false);
-  if (loading)
-    return (
-      <div className="grid min-h-screen place-items-center bg-[#F5F9FF] text-[#64748B]">
-        Loading workspace…
-      </div>
-    );
-  if (!user) return <Login />;
-  const navigate = (next: Page) => {
-    if (
-      (next === "review" || next === "reports") &&
-      !["manager", "ceo", "admin"].includes(role ?? "")
-    ) {
-      setPage("dashboard");
-      return;
-    }
-    setPage(next);
-    setMobileOpen(false);
-  };
-  const content =
-    page === "dashboard" ? (
-      <Dashboard onNavigate={navigate} />
-    ) : page === "baseline" ? (
-      <Assessment type="baseline" />
-    ) : page === "weekly" ? (
-      <Scorecard />
-    ) : page === "commitments" ? (
-      <Commitments />
-    ) : page === "track" ? (
-      <Track />
-    ) : page === "review" ? (
-      <Review />
-    ) : page === "trends" ? (
-      <Trends />
-    ) : (
-      <Reports />
-    );
+import { NotFound, PublicOnly, RequireAuth, RequireRole } from "./components/guards";
+import { Spinner } from "./components/ui";
+import { AuthProvider } from "./context/AuthContext";
+import { EXECUTIVE_ROLES, MANAGEMENT_ROLES } from "./domain";
+import { Baseline } from "./screens/Baseline";
+import { CommitmentDetail } from "./screens/CommitmentDetail";
+import { Commitments } from "./screens/Commitments";
+import { Home } from "./screens/Dashboard";
+import { Notifications } from "./screens/Notifications";
+import { Reviews } from "./screens/Review";
+import { Track } from "./screens/Track";
+import { Weekly } from "./screens/Weekly";
+import { ForgotPassword, Login, ResetPassword } from "./screens/AuthScreens";
+import { AppError } from "./services/supabase";
+
+// Chart- and report-heavy screens load on demand.
+const Trends = lazy(() => import("./screens/Trends").then((m) => ({ default: m.Trends })));
+const Cockpit = lazy(() => import("./screens/Cockpit").then((m) => ({ default: m.Cockpit })));
+const Reports = lazy(() => import("./screens/Reports").then((m) => ({ default: m.Reports })));
+const Team = lazy(() => import("./screens/Team").then((m) => ({ default: m.Team })));
+const PersonDetail = lazy(() =>
+  import("./screens/PersonDetail").then((m) => ({ default: m.PersonDetail })),
+);
+const TeamCommitments = lazy(() =>
+  import("./screens/TeamCommitments").then((m) => ({ default: m.TeamCommitments })),
+);
+const People = lazy(() => import("./screens/People").then((m) => ({ default: m.People })));
+const AuditLog = lazy(() => import("./screens/AuditLog").then((m) => ({ default: m.AuditLog })));
+
+export function createQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 30_000,
+        // A permission error will not fix itself on retry.
+        retry: (count, error) =>
+          count < 1 && !(error instanceof AppError && error.code === "42501"),
+      },
+    },
+  });
+}
+
+const queryClient = createQueryClient();
+
+export function AppRoutes() {
   return (
-    <div className="flex min-h-screen bg-[#F5F9FF]">
-      <Sidebar page={page} onNavigate={navigate} role={role} />
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/30 lg:hidden"
-          onClick={() => setMobileOpen(false)}
-        >
-          <div className="h-full w-72 bg-[#174A7E]" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-end p-3">
-              <button
-                aria-label="Close navigation"
-                onClick={() => setMobileOpen(false)}
-                className="text-white"
-              >
-                <X />
-              </button>
-            </div>
-            <Sidebar page={page} onNavigate={navigate} role={role} mobile />
-          </div>
-        </div>
-      )}
-      <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[#DCEAFE] bg-white/95 px-4 backdrop-blur md:px-8">
-          <div className="flex items-center gap-3">
-            <button
-              aria-label="Open navigation"
-              className="lg:hidden"
-              onClick={() => setMobileOpen(true)}
-            >
-              <Menu size={20} />
-            </button>
-            <div className="hidden items-center gap-2 rounded-xl bg-[#F5F9FF] px-3 py-2 md:flex">
-              <Search size={16} className="text-[#64748B]" />
-              <span className="text-sm text-[#64748B]">Search workspace</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Bell size={19} className="text-[#64748B]" />
-            <button
-              aria-label="Sign out"
-              onClick={signOut}
-              className="rounded-lg p-2 hover:bg-[#F5F9FF]"
-            >
-              <LogOut size={18} />
-            </button>
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#174A7E] text-sm font-bold text-white">
-              {(user.email?.slice(0, 2) || "VA").toUpperCase()}
-            </div>
-          </div>
-        </header>
-        <main className="mx-auto max-w-7xl p-4 md:p-8">{content}</main>
-      </div>
-    </div>
+    <Suspense fallback={<Spinner />}>
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            <PublicOnly>
+              <Login />
+            </PublicOnly>
+          }
+        />
+        <Route
+          path="/forgot-password"
+          element={
+            <PublicOnly>
+              <ForgotPassword />
+            </PublicOnly>
+          }
+        />
+        <Route path="/reset-password" element={<ResetPassword />} />
+
+        <Route element={<RequireAuth />}>
+          <Route index element={<Home />} />
+          <Route path="baseline" element={<Baseline />} />
+          <Route path="weekly" element={<Weekly />} />
+          <Route path="commitments" element={<Commitments />} />
+          <Route path="commitments/:id" element={<CommitmentDetail />} />
+          <Route path="track" element={<Track />} />
+          <Route path="trends" element={<Trends />} />
+          <Route path="review" element={<Reviews />} />
+          <Route path="notifications" element={<Notifications />} />
+
+          <Route element={<RequireRole roles={MANAGEMENT_ROLES} />}>
+            <Route path="cockpit" element={<Cockpit />} />
+            <Route path="team" element={<Team />} />
+            <Route path="team/commitments" element={<TeamCommitments />} />
+            <Route path="team/:userId" element={<PersonDetail />} />
+            <Route path="reports" element={<Reports />} />
+          </Route>
+
+          <Route element={<RequireRole roles={EXECUTIVE_ROLES} />}>
+            <Route path="people" element={<People />} />
+            <Route path="audit" element={<AuditLog />} />
+          </Route>
+        </Route>
+
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Suspense>
   );
 }
+
 export default function App() {
   return (
-    <AuthProvider>
-      <ErrorBoundary>
-        <Workspace />
-      </ErrorBoundary>
-    </AuthProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
