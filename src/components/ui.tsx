@@ -1,4 +1,42 @@
-import type {ButtonHTMLAttributes,HTMLAttributes,ReactNode} from "react";
-export function Button({children,className="",...props}:ButtonHTMLAttributes<HTMLButtonElement>&{children:ReactNode}){return <button className={"rounded-xl px-4 py-2.5 text-sm font-semibold transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 "+className} {...props}>{children}</button>;}
-export function Card({children,className="",...props}:HTMLAttributes<HTMLElement>&{children:ReactNode}){return <section {...props} className={"rounded-2xl border border-slate-200 bg-white shadow-[0_12px_40px_rgba(23,43,77,0.06)] "+className}>{children}</section>;}
-export function Badge({children}:{children:ReactNode}){return <span className="inline-flex rounded-full bg-[#EFF6FF] px-2.5 py-1 text-xs font-bold text-[#2563EB]">{children}</span>;}
+import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
+export function Button({
+  children,
+  className = "",
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & { children: ReactNode }) {
+  return (
+    <button
+      className={
+        "rounded-xl px-4 py-2.5 text-sm font-semibold transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 " +
+        className
+      }
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+export function Card({
+  children,
+  className = "",
+  ...props
+}: HTMLAttributes<HTMLElement> & { children: ReactNode }) {
+  return (
+    <section
+      {...props}
+      className={
+        "rounded-2xl border border-slate-200 bg-white shadow-[0_12px_40px_rgba(23,43,77,0.06)] " +
+        className
+      }
+    >
+      {children}
+    </section>
+  );
+}
+export function Badge({ children }: { children: ReactNode }) {
+  return (
+    <span className="inline-flex rounded-full bg-[#EFF6FF] px-2.5 py-1 text-xs font-bold text-[#2563EB]">
+      {children}
+    </span>
+  );
+}

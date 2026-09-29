@@ -1,33 +1,285 @@
-import {CircleAlert,Clock3,Filter,Target,TrendingUp} from "lucide-react";
-import {useEffect,useMemo,useState} from "react";
-import {Card} from "../components/ui";
-import {getCurrentUserDashboard,updateCommitmentTracking} from "../services/data";
-import type {Commitment} from "../types";
+import { CircleAlert, Clock3, Filter, Target, TrendingUp } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Card } from "../components/ui";
+import { getCurrentUserDashboard, updateCommitmentTracking } from "../services/data";
+import type { Commitment } from "../types";
 
-type FilterKey="all"|"open"|"overdue"|"complete";
+type FilterKey = "all" | "open" | "overdue" | "complete";
 
-function normalise(raw:any):Commitment{return{id:raw.id,dimensionId:raw.dimension_id,title:raw.title,action:raw.action,timeframe:raw.timeframe??"",evidence:raw.evidence??"",status:raw.status,dueDate:raw.due_date??null,ownerUserId:raw.owner_user_id??null,baselineValue:raw.baseline_value??null,targetValue:raw.target_value??null,progressPercent:Number(raw.progress_percent??0),priority:raw.priority??"normal",blocker:raw.blocker??"",managerNotes:raw.manager_notes??"",completedAt:raw.completed_at??null,createdAt:raw.created_at,updatedAt:raw.updated_at}}
+function normalise(raw: any): Commitment {
+  return {
+    id: raw.id,
+    dimensionId: raw.dimension_id,
+    title: raw.title,
+    action: raw.action,
+    timeframe: raw.timeframe ?? "",
+    evidence: raw.evidence ?? "",
+    status: raw.status,
+    dueDate: raw.due_date ?? null,
+    ownerUserId: raw.owner_user_id ?? null,
+    baselineValue: raw.baseline_value ?? null,
+    targetValue: raw.target_value ?? null,
+    progressPercent: Number(raw.progress_percent ?? 0),
+    priority: raw.priority ?? "normal",
+    blocker: raw.blocker ?? "",
+    managerNotes: raw.manager_notes ?? "",
+    completedAt: raw.completed_at ?? null,
+    createdAt: raw.created_at,
+    updatedAt: raw.updated_at,
+  };
+}
 
-function isOverdue(c:Commitment){return c.status!=="complete"&&!!c.dueDate&&new Date(c.dueDate+"T23:59:59")<new Date()}
+function isOverdue(c: Commitment) {
+  return c.status !== "complete" && !!c.dueDate && new Date(c.dueDate + "T23:59:59") < new Date();
+}
 
-export function Track(){
- const[items,setItems]=useState<Commitment[]>([]);const[filter,setFilter]=useState<FilterKey>("all");const[error,setError]=useState("");const[busy,setBusy]=useState<string|null>(null);
- useEffect(()=>{getCurrentUserDashboard().then(d=>setItems((d.commitments??[]).map(normalise))).catch(e=>setError(e instanceof Error?e.message:"Unable to load tracking workspace."));},[]);
- const filtered=useMemo(()=>items.filter(c=>filter==="all"?true:filter==="open"?c.status!=="complete":filter==="overdue"?isOverdue(c):c.status==="complete"),[items,filter]);
- const open=items.filter(c=>c.status!=="complete").length, overdue=items.filter(isOverdue).length, complete=items.filter(c=>c.status==="complete").length;
- const save=async(id:string,patch:Partial<Commitment>)=>{setBusy(id);setError("");try{await updateCommitmentTracking(id,patch);setItems(xs=>xs.map(x=>x.id===id?{...x,...patch,progressPercent:patch.status==="complete"?100:patch.progressPercent??x.progressPercent}:x));}catch(e){setError(e instanceof Error?e.message:"Unable to update commitment.");}finally{setBusy(null)}};
- return <div className="space-y-6">
-  <div><div className="flex items-center gap-2 text-sm font-semibold text-[#60A5FA]"><Target size={16}/> EXECUTION TRACKING</div><h1 className="mt-2 text-3xl font-bold text-[#2563EB]">Track & Improve</h1><p className="mt-2 max-w-3xl text-[#64748B]">Turn every commitment into a measurable execution loop: owner, target, progress, blocker, deadline and evidence.</p></div>
-  {error&&<Card className="border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert">{error}</Card>}
-  <div className="grid gap-4 md:grid-cols-4"><Card className="p-5"><Clock3 className="text-[#60A5FA]"/><p className="mt-3 text-sm text-[#64748B]">Open</p><p className="text-2xl font-bold text-[#2563EB]">{open}</p></Card><Card className="p-5"><CircleAlert className="text-[#60A5FA]"/><p className="mt-3 text-sm text-[#64748B]">Overdue</p><p className="text-2xl font-bold text-[#2563EB]">{overdue}</p></Card><Card className="p-5"><TrendingUp className="text-[#60A5FA]"/><p className="mt-3 text-sm text-[#64748B]">Completed</p><p className="text-2xl font-bold text-[#2563EB]">{complete}</p></Card><Card className="p-5"><Target className="text-[#60A5FA]"/><p className="mt-3 text-sm text-[#64748B]">Average progress</p><p className="text-2xl font-bold text-[#2563EB]">{items.length?Math.round(items.reduce((n,c)=>n+(c.progressPercent??0),0)/items.length):0}%</p></Card></div>
-  <Card className="p-4"><div className="flex flex-wrap items-center gap-2"><Filter size={16} className="text-[#64748B]"/>{([["all","All"],["open","Open"],["overdue","Overdue"],["complete","Complete"]] as [FilterKey,string][]).map(([k,l])=><button key={k} onClick={()=>setFilter(k)} aria-pressed={filter===k} className={"rounded-xl border px-3 py-2 text-sm font-semibold "+(filter===k?"border-[#2563EB] bg-[#2563EB] text-white":"border-slate-200 bg-white text-[#2563EB]")}>{l}</button>)}</div></Card>
-  <div className="space-y-4">{filtered.length?filtered.map(c=><Card key={c.id} className="p-5 md:p-6">
-    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between"><div><div className="text-xs font-bold uppercase tracking-wider text-[#60A5FA]">{c.priority} priority</div><h2 className="mt-1 text-lg font-bold text-[#2563EB]">{c.title}</h2><p className="mt-1 text-sm text-slate-600">{c.action}</p></div><div className={"rounded-full px-3 py-1 text-xs font-bold "+(isOverdue(c)?"bg-red-50 text-red-700":c.status==="complete"?"bg-emerald-50 text-emerald-700":"bg-[#EFF6FF] text-[#2563EB]")}>{isOverdue(c)?"Overdue":c.status.replace("_"," ")}</div></div>
-    <div className="mt-5 grid gap-4 md:grid-cols-3"><label className="text-xs font-bold uppercase tracking-wide text-[#64748B]">Due date<input type="date" value={c.dueDate??""} onChange={e=>save(c.id,{dueDate:e.target.value||null})} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"/></label><label className="text-xs font-bold uppercase tracking-wide text-[#64748B]">Priority<select value={c.priority??"normal"} onChange={e=>save(c.id,{priority:e.target.value as Commitment["priority"]})} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"><option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="critical">Critical</option></select></label><label className="text-xs font-bold uppercase tracking-wide text-[#64748B]">Status<select value={c.status} onChange={e=>save(c.id,{status:e.target.value as Commitment["status"]})} className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"><option value="not_started">Not started</option><option value="in_progress">In progress</option><option value="complete">Complete</option></select></label></div>
-    <div className="mt-5"><div className="flex items-center justify-between text-sm"><span className="font-semibold text-[#173B6C]">Progress</span><span className="font-bold text-[#2563EB]">{c.progressPercent??0}%</span></div><input aria-label={"Progress for "+c.title} type="range" min="0" max="100" step="5" value={c.progressPercent??0} onChange={e=>save(c.id,{progressPercent:Number(e.target.value),status:Number(e.target.value)===100?"complete":"in_progress"})} className="mt-2 w-full accent-[#2563EB]"/></div>
-    <div className="mt-4 grid gap-4 md:grid-cols-2"><div className="rounded-xl bg-[#F5F9FF] p-4"><p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">Baseline → Target</p><p className="mt-2 font-semibold text-[#173B6C]">{c.baselineValue??"—"} → {c.targetValue??"—"}</p></div><div className="rounded-xl bg-[#F5F9FF] p-4"><p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">Evidence</p><p className="mt-2 text-sm text-[#173B6C]">{c.evidence||"Add evidence in the Commitment Charter."}</p></div></div>
-    <label className="mt-4 block text-xs font-bold uppercase tracking-wide text-[#64748B]">Current blocker<textarea value={c.blocker??""} onChange={e=>setItems(xs=>xs.map(x=>x.id===c.id?{...x,blocker:e.target.value}:x))} onBlur={e=>save(c.id,{blocker:e.target.value})} placeholder="What is preventing progress?" className="mt-2 min-h-20 w-full rounded-xl border border-slate-200 p-3 text-sm"/></label>
-    {busy===c.id&&<p className="mt-2 text-xs text-[#64748B]">Saving…</p>}
-  </Card>):<Card className="p-10 text-center text-sm text-[#64748B]">No commitments match this view.</Card>}</div>
- </div>
+export function Track() {
+  const [items, setItems] = useState<Commitment[]>([]);
+  const [filter, setFilter] = useState<FilterKey>("all");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+  useEffect(() => {
+    getCurrentUserDashboard()
+      .then((d) => setItems((d.commitments ?? []).map(normalise)))
+      .catch((e) =>
+        setError(e instanceof Error ? e.message : "Unable to load tracking workspace."),
+      );
+  }, []);
+  const filtered = useMemo(
+    () =>
+      items.filter((c) =>
+        filter === "all"
+          ? true
+          : filter === "open"
+            ? c.status !== "complete"
+            : filter === "overdue"
+              ? isOverdue(c)
+              : c.status === "complete",
+      ),
+    [items, filter],
+  );
+  const open = items.filter((c) => c.status !== "complete").length,
+    overdue = items.filter(isOverdue).length,
+    complete = items.filter((c) => c.status === "complete").length;
+  const save = async (id: string, patch: Partial<Commitment>) => {
+    setBusy(id);
+    setError("");
+    try {
+      await updateCommitmentTracking(id, patch);
+      setItems((xs) =>
+        xs.map((x) =>
+          x.id === id
+            ? {
+                ...x,
+                ...patch,
+                progressPercent:
+                  patch.status === "complete" ? 100 : (patch.progressPercent ?? x.progressPercent),
+              }
+            : x,
+        ),
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to update commitment.");
+    } finally {
+      setBusy(null);
+    }
+  };
+  return (
+    <div className="space-y-6">
+      <div>
+        <div className="flex items-center gap-2 text-sm font-semibold text-[#60A5FA]">
+          <Target size={16} /> EXECUTION TRACKING
+        </div>
+        <h1 className="mt-2 text-3xl font-bold text-[#2563EB]">Track & Improve</h1>
+        <p className="mt-2 max-w-3xl text-[#64748B]">
+          Turn every commitment into a measurable execution loop: owner, target, progress, blocker,
+          deadline and evidence.
+        </p>
+      </div>
+      {error && (
+        <Card className="border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert">
+          {error}
+        </Card>
+      )}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card className="p-5">
+          <Clock3 className="text-[#60A5FA]" />
+          <p className="mt-3 text-sm text-[#64748B]">Open</p>
+          <p className="text-2xl font-bold text-[#2563EB]">{open}</p>
+        </Card>
+        <Card className="p-5">
+          <CircleAlert className="text-[#60A5FA]" />
+          <p className="mt-3 text-sm text-[#64748B]">Overdue</p>
+          <p className="text-2xl font-bold text-[#2563EB]">{overdue}</p>
+        </Card>
+        <Card className="p-5">
+          <TrendingUp className="text-[#60A5FA]" />
+          <p className="mt-3 text-sm text-[#64748B]">Completed</p>
+          <p className="text-2xl font-bold text-[#2563EB]">{complete}</p>
+        </Card>
+        <Card className="p-5">
+          <Target className="text-[#60A5FA]" />
+          <p className="mt-3 text-sm text-[#64748B]">Average progress</p>
+          <p className="text-2xl font-bold text-[#2563EB]">
+            {items.length
+              ? Math.round(items.reduce((n, c) => n + (c.progressPercent ?? 0), 0) / items.length)
+              : 0}
+            %
+          </p>
+        </Card>
+      </div>
+      <Card className="p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Filter size={16} className="text-[#64748B]" />
+          {(
+            [
+              ["all", "All"],
+              ["open", "Open"],
+              ["overdue", "Overdue"],
+              ["complete", "Complete"],
+            ] as [FilterKey, string][]
+          ).map(([k, l]) => (
+            <button
+              key={k}
+              onClick={() => setFilter(k)}
+              aria-pressed={filter === k}
+              className={
+                "rounded-xl border px-3 py-2 text-sm font-semibold " +
+                (filter === k
+                  ? "border-[#2563EB] bg-[#2563EB] text-white"
+                  : "border-slate-200 bg-white text-[#2563EB]")
+              }
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+      </Card>
+      <div className="space-y-4">
+        {filtered.length ? (
+          filtered.map((c) => (
+            <Card key={c.id} className="p-5 md:p-6">
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-wider text-[#60A5FA]">
+                    {c.priority} priority
+                  </div>
+                  <h2 className="mt-1 text-lg font-bold text-[#2563EB]">{c.title}</h2>
+                  <p className="mt-1 text-sm text-slate-600">{c.action}</p>
+                </div>
+                <div
+                  className={
+                    "rounded-full px-3 py-1 text-xs font-bold " +
+                    (isOverdue(c)
+                      ? "bg-red-50 text-red-700"
+                      : c.status === "complete"
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "bg-[#EFF6FF] text-[#2563EB]")
+                  }
+                >
+                  {isOverdue(c) ? "Overdue" : c.status.replace("_", " ")}
+                </div>
+              </div>
+              <div className="mt-5 grid gap-4 md:grid-cols-3">
+                <label className="text-xs font-bold uppercase tracking-wide text-[#64748B]">
+                  Due date
+                  <input
+                    type="date"
+                    value={c.dueDate ?? ""}
+                    onChange={(e) => save(c.id, { dueDate: e.target.value || null })}
+                    className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                  />
+                </label>
+                <label className="text-xs font-bold uppercase tracking-wide text-[#64748B]">
+                  Priority
+                  <select
+                    value={c.priority ?? "normal"}
+                    onChange={(e) =>
+                      save(c.id, { priority: e.target.value as Commitment["priority"] })
+                    }
+                    className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                  >
+                    <option value="low">Low</option>
+                    <option value="normal">Normal</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </label>
+                <label className="text-xs font-bold uppercase tracking-wide text-[#64748B]">
+                  Status
+                  <select
+                    value={c.status}
+                    onChange={(e) => save(c.id, { status: e.target.value as Commitment["status"] })}
+                    className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                  >
+                    <option value="not_started">Not started</option>
+                    <option value="in_progress">In progress</option>
+                    <option value="complete">Complete</option>
+                  </select>
+                </label>
+              </div>
+              <div className="mt-5">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-semibold text-[#173B6C]">Progress</span>
+                  <span className="font-bold text-[#2563EB]">{c.progressPercent ?? 0}%</span>
+                </div>
+                <input
+                  aria-label={"Progress for " + c.title}
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value={c.progressPercent ?? 0}
+                  onChange={(e) =>
+                    save(c.id, {
+                      progressPercent: Number(e.target.value),
+                      status: Number(e.target.value) === 100 ? "complete" : "in_progress",
+                    })
+                  }
+                  className="mt-2 w-full accent-[#2563EB]"
+                />
+              </div>
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div className="rounded-xl bg-[#F5F9FF] p-4">
+                  <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">
+                    Baseline → Target
+                  </p>
+                  <p className="mt-2 font-semibold text-[#173B6C]">
+                    {c.baselineValue ?? "—"} → {c.targetValue ?? "—"}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-[#F5F9FF] p-4">
+                  <p className="text-xs font-bold uppercase tracking-wide text-[#64748B]">
+                    Evidence
+                  </p>
+                  <p className="mt-2 text-sm text-[#173B6C]">
+                    {c.evidence || "Add evidence in the Commitment Charter."}
+                  </p>
+                </div>
+              </div>
+              <label className="mt-4 block text-xs font-bold uppercase tracking-wide text-[#64748B]">
+                Current blocker
+                <textarea
+                  value={c.blocker ?? ""}
+                  onChange={(e) =>
+                    setItems((xs) =>
+                      xs.map((x) => (x.id === c.id ? { ...x, blocker: e.target.value } : x)),
+                    )
+                  }
+                  onBlur={(e) => save(c.id, { blocker: e.target.value })}
+                  placeholder="What is preventing progress?"
+                  className="mt-2 min-h-20 w-full rounded-xl border border-slate-200 p-3 text-sm"
+                />
+              </label>
+              {busy === c.id && <p className="mt-2 text-xs text-[#64748B]">Saving…</p>}
+            </Card>
+          ))
+        ) : (
+          <Card className="p-10 text-center text-sm text-[#64748B]">
+            No commitments match this view.
+          </Card>
+        )}
+      </div>
+    </div>
+  );
 }
