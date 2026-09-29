@@ -38,21 +38,21 @@ export function TrendChart({
       <div className="h-72 w-full" aria-hidden="true">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 8, right: 16, bottom: 4, left: -16 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#dbe5f3" vertical={false} />
-            <XAxis dataKey="name" tick={{ fill: "#475569", fontSize: 12 }} tickLine={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#dde5f1" vertical={false} />
+            <XAxis dataKey="name" tick={{ fill: "#465470", fontSize: 12 }} tickLine={false} />
             <YAxis
               domain={[1, 5]}
               ticks={[1, 2, 3, 4, 5]}
-              tick={{ fill: "#475569", fontSize: 12 }}
+              tick={{ fill: "#465470", fontSize: 12 }}
               tickLine={false}
             />
             <Tooltip formatter={(v) => [Number(v).toFixed(2), "Score"]} />
             <Line
               type="monotone"
               dataKey="score"
-              stroke="#1d4ed8"
+              stroke="#17357a"
               strokeWidth={3}
-              dot={{ r: 4, fill: "#1d4ed8" }}
+              dot={{ r: 4, fill: "#17357a" }}
               activeDot={{ r: 6 }}
               isAnimationActive={false}
             />

@@ -15,7 +15,7 @@ function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="grid min-h-screen place-items-center bg-gradient-to-br from-brand-800 via-brand-700 to-brand-600 p-5">
+    <div className="grid min-h-screen place-items-center bg-gradient-to-br from-brand-900 via-brand-800 to-brand-600 p-5">
       <Card className="w-full max-w-md p-8">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-700">Vision Activ</p>
         <h1 className="mt-2 text-2xl font-bold text-ink-900">{title}</h1>

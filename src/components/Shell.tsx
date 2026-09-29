@@ -84,7 +84,7 @@ export function Shell({ children }: { children: ReactNode }) {
       </a>
 
       <aside
-        className="no-print hidden w-64 shrink-0 flex-col bg-brand-800 lg:flex"
+        className="no-print hidden w-64 shrink-0 flex-col bg-gradient-to-b from-brand-900 to-brand-800 lg:flex"
         aria-label="Sidebar"
       >
         <div className="sticky top-0 flex h-screen flex-col">
@@ -110,7 +110,7 @@ export function Shell({ children }: { children: ReactNode }) {
             className="absolute inset-0 bg-slate-900/50"
             onClick={() => setOpen(false)}
           />
-          <div className="relative flex h-full w-72 max-w-[85vw] flex-col bg-brand-800">
+          <div className="relative flex h-full w-72 max-w-[85vw] flex-col bg-gradient-to-b from-brand-900 to-brand-800">
             <div className="flex justify-end p-2">
               <button
                 ref={closeRef}
