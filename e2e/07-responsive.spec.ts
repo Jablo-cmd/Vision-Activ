@@ -7,9 +7,7 @@ import { session, sql, userId, type Who } from "./helpers";
  * inside an intentional horizontally scrolling region (tables).
  */
 // The widths are set explicitly, so the mobile project would only repeat the same work.
-test.beforeEach((_fixtures, info) =>
-  test.skip(info.project.name !== "desktop", "sets its own viewports"),
-);
+test.skip(({ isMobile }) => isMobile, "sets its own viewports");
 
 const WIDTHS = [320, 360, 375, 390, 414, 768, 1024, 1280, 1680];
 
