@@ -42,7 +42,7 @@ administrators) so the administrator is not listed as a missed weekly scorecard.
 
 * `supabase/demo/seed_demo.sql` - the loader. Idempotent; needs `demo.password` set in the session:
   `select set_config('demo.password','<password>',false);` before running the file.
-* `supabase/demo/verify_demo.sql` - 29 read-only integrity checks (every row must read `t`).
+* `supabase/demo/verify_demo.sql` - 30 read-only integrity checks (every row must read `t`).
 * `scripts/db-demo.sh` - loads, verifies and proves a second load changes nothing (used by CI).
 * `supabase/demo/deactivate_demo.sql` - deactivates and bans every demonstration account. **Run before real go-live.**
 * `playwright.demo.config.ts`, `e2e/demo/` - exercises the populated data as the CEO, a manager and an employee:
