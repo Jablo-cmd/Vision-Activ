@@ -61,6 +61,21 @@ async function offenders(page: Page): Promise<string[]> {
     const out: string[] = [];
     if (document.documentElement.scrollWidth > vw + 1)
       out.push(`page ${document.documentElement.scrollWidth}>${vw}`);
+    // Tables must fold into cards on a phone; only the pinned-column matrices may scroll inside their region.
+    if (vw <= 767) {
+      const matrices = ["Dimension scores by week", "Weekly scores by dimension"];
+      for (const el of document.querySelectorAll("main *")) {
+        const ox = getComputedStyle(el).overflowX;
+        if (
+          (ox === "auto" || ox === "scroll") &&
+          el.scrollWidth > el.clientWidth + 1 &&
+          !matrices.includes(el.getAttribute("aria-label") ?? "")
+        )
+          out.push(
+            `needs a sideways swipe: ${el.getAttribute("aria-label") ?? el.tagName} ${el.scrollWidth}/${el.clientWidth}`,
+          );
+      }
+    }
     for (const el of document.querySelectorAll("main *, header *")) {
       const r = el.getBoundingClientRect();
       if (r.width && r.right > vw + 1 && !inScroller(el.parentElement)) {
@@ -313,6 +328,9 @@ test("mobile captures of the executive story", async ({ browser }) => {
     ["/cockpit", "cockpit"],
     ["/people", "people"],
     ["/team", "team"],
+    ["/team/commitments", "team-commitments"],
+    ["/reports", "reports"],
+    ["/trends", "trends"],
     ["/review", "reviews"],
     ["/notifications", "notifications"],
   ] as const) {

@@ -50,6 +50,8 @@ html {
 }
 
 body {
+  /* Safety net: nothing may make the page itself scroll sideways; tables scroll inside their own region. */
+  overflow-x: clip;
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
@@ -128,4 +130,90 @@ p {
 td,
 th {
   font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* ---- Tables ---------------------------------------------------------------------------------------- */
+.table-wrap {
+  container: table-wrap / inline-size;
+}
+
+/* Matrices keep their grid; the first column stays in view while the weeks scroll. */
+.matrix-table th:first-child,
+.matrix-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--color-white);
+  box-shadow: 1px 0 0 var(--color-line);
+}
+.matrix-table thead th:first-child {
+  background: var(--color-brand-50);
+}
+
+/* Narrow containers: each row becomes a card; each cell shows its column heading as a label. */
+@container table-wrap (max-width: 52rem) {
+  .cards-table {
+    min-width: 0;
+  }
+  .cards-table,
+  .cards-table tbody,
+  .cards-table tr,
+  .cards-table td {
+    display: block;
+    width: 100%;
+  }
+  /* Column headings stay available to assistive technology but are not drawn. */
+  .cards-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .cards-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem 1rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .cards-table tbody tr:last-child {
+    border-bottom: 0;
+  }
+  .cards-table td {
+    display: block;
+    border-bottom: 0;
+    padding: 0;
+    text-align: left;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .cards-table td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.1rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-ink-500);
+  }
+  .cards-table td[data-label=""]::before {
+    content: none;
+  }
+  /* The first cell names the row and leads the card; long or interactive cells take the full width. */
+  .cards-table td:first-child,
+  .cards-table td[data-wide="1"],
+  .cards-table td[colspan] {
+    grid-column: 1 / -1;
+  }
+  .cards-table td:first-child::before,
+  .cards-table td[colspan]::before {
+    content: none;
+  }
+  .cards-table td select,
+  .cards-table td input:not([type="checkbox"]) {
+    width: 100%;
+  }
 }

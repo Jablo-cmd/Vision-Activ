@@ -260,7 +260,7 @@ export function Cockpit() {
           <Card className="p-5">
             <SectionTitle>Performance by dimension, last 8 weeks</SectionTitle>
             <div className="mt-3">
-              <TableWrap label="Dimension scores by week">
+              <TableWrap label="Dimension scores by week" layout="matrix">
                 <thead>
                   <tr>
                     <Th>Dimension</Th>

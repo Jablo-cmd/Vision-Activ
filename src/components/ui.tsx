@@ -1,6 +1,8 @@
 import {
   forwardRef,
+  useEffect,
   useId,
+  useRef,
   type ButtonHTMLAttributes,
   type HTMLAttributes,
   type InputHTMLAttributes,
@@ -331,17 +333,82 @@ export const Textarea = forwardRef<
 
 /* Tables ------------------------------------------------------------------------------------ */
 
-export function TableWrap({ children, label }: { children: ReactNode; label: string }) {
+/**
+ * Tables. Wide tables fold into stacked cards when their own container is narrow (phones, small tablets),
+ * so nobody has to swipe sideways to read a row. Matrices with many numeric columns (week-by-dimension
+ * heat maps) keep their grid, scroll inside their own region and pin the first column.
+ *
+ * The folding is pure CSS (see index.css). Table semantics are restated with ARIA roles because browsers
+ * drop them once `display` is changed, and each cell is labelled from its column heading.
+ */
+export function TableWrap({
+  children,
+  label,
+  layout = "cards",
+}: {
+  children: ReactNode;
+  label: string;
+  layout?: "cards" | "matrix";
+}) {
+  const ref = useRef<HTMLTableElement>(null);
+
+  useEffect(() => {
+    const table = ref.current;
+    if (!table || layout !== "cards") return;
+    const apply = () => decorateTable(table);
+    apply();
+    const observer = new MutationObserver(apply);
+    observer.observe(table, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [layout]);
+
   return (
     <div
-      className="relative overflow-x-auto rounded-xl border border-line bg-white shadow-card"
+      className={cx(
+        "table-wrap relative overflow-x-auto rounded-xl border border-line bg-white shadow-card",
+        layout === "matrix" && "matrix-table",
+      )}
       role="region"
       aria-label={label}
       tabIndex={0}
     >
-      <table className="w-full min-w-[40rem] border-collapse text-left text-sm">{children}</table>
+      <table
+        ref={ref}
+        className={cx(
+          "w-full border-collapse text-left text-sm",
+          layout === "cards" ? "cards-table min-w-[40rem]" : "min-w-[40rem]",
+        )}
+      >
+        {children}
+      </table>
     </div>
   );
+}
+
+/** Labels every cell with its column heading and restates the table roles for the folded layout. */
+function decorateTable(table: HTMLTableElement) {
+  const heads = Array.from(table.querySelectorAll("thead th")).map(
+    (th) => th.textContent?.trim() ?? "",
+  );
+  table.setAttribute("role", "table");
+  table.querySelectorAll("thead, tbody").forEach((g) => g.setAttribute("role", "rowgroup"));
+  table.querySelectorAll("tr").forEach((tr) => tr.setAttribute("role", "row"));
+  table.querySelectorAll("th").forEach((th) => th.setAttribute("role", "columnheader"));
+  table.querySelectorAll("tbody tr").forEach((tr) => {
+    let column = 0;
+    Array.from(tr.children).forEach((cell) => {
+      const td = cell as HTMLTableCellElement;
+      td.setAttribute("role", "cell");
+      const label = heads[column] ?? "";
+      if (td.getAttribute("data-label") !== label) td.setAttribute("data-label", label);
+      const wide =
+        (td.textContent?.trim().length ?? 0) > 26 ||
+        td.querySelector("select, input, button, textarea") !== null;
+      if (td.getAttribute("data-wide") !== (wide ? "1" : "0"))
+        td.setAttribute("data-wide", wide ? "1" : "0");
+      column += td.colSpan || 1;
+    });
+  });
 }
 
 export const Th = ({ children, className }: { children?: ReactNode; className?: string }) => (

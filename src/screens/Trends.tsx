@@ -161,7 +161,7 @@ export function Trends() {
           <Card className="p-5">
             <SectionTitle>Last {heatWeeks.length} weeks by dimension</SectionTitle>
             <div className="mt-3">
-              <TableWrap label="Weekly scores by dimension">
+              <TableWrap label="Weekly scores by dimension" layout="matrix">
                 <thead>
                   <tr>
                     <Th>Dimension</Th>
