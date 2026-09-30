@@ -83,7 +83,8 @@ Docker is required for the local stack. If your Playwright browser build differs
   `anon` and PUBLIC hold no privileges, every `SECURITY DEFINER` function pins `search_path`.
 * **Playwright** drives the real UI against real Auth/PostgREST/Storage: the closed loop across employee → manager → CEO, direct API attacks
   with a peer's valid token, private file upload and signed-URL download, password reset from the captured email, axe WCAG 2.1 A/AA
-  on every screen for every role, and phone-width layouts.
+  on every screen for every role, Storage attacks (forged paths, overwrite, peer reads, public URLs), and a responsive audit that fails on
+  any horizontal overflow or clipped element at 320, 360, 375, 390, 414, 768, 1024, 1280 and 1680px for every role.
 * **Vitest** covers the pure calculation library at 100% of lines and functions, and re-runs under other time zones.
 
 ## CI/CD
@@ -104,7 +105,9 @@ Do not edit an applied migration; add a new one. See [`docs/OPERATIONS.md`](docs
 
 ## Design system
 
-Friendly corporate blue on white. Tokens live in `src/index.css`; every text/background pairing meets WCAG AA (axe verifies it in CI).
+Friendly corporate blue on white, navy for text and emphasis, Fraunces for titles and headline figures, Inter for everything functional
+(both bundled, no third-party font requests). The operating loop (Assess → Improve) is shown on the employee dashboard with real status
+per stage. Tokens live in `src/index.css`; the palette is a placeholder until the brand guide's exact values are supplied; every text/background pairing meets WCAG AA (axe verifies it in CI).
 Colour is never the only signal: scores, deltas and statuses always carry text.
 
 ## Privacy and governance

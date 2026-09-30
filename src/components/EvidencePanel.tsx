@@ -13,7 +13,7 @@ import {
   listEvidence,
   reviewEvidence,
 } from "../services/evidence";
-import { errorText } from "../services/supabase";
+import { errorText, AppError } from "../services/supabase";
 import { Alert, Badge, Button, Card, Field, Input, SectionTitle, Spinner, Textarea } from "./ui";
 
 const KIND_ICON = { note: NotebookText, link: Link2, file: FileText, metric: Sigma } as const;
@@ -177,21 +177,21 @@ function AddEvidence({
   const add = useMutation({
     mutationFn: async () => {
       const base = { commitmentId, organizationId, title: title.trim() };
-      if (!base.title) throw new Error("Give the evidence a title.");
+      if (!base.title) throw new AppError("Give the evidence a title.");
       if (kind === "note") {
-        if (!body.trim()) throw new Error("Write the note.");
+        if (!body.trim()) throw new AppError("Write the note.");
         await addNoteEvidence(base, body.trim());
       } else if (kind === "link") {
         if (!isHttpUrl(url.trim()))
-          throw new Error("Enter a full web address starting with http:// or https://.");
+          throw new AppError("Enter a full web address starting with http:// or https://.");
         await addLinkEvidence(base, url.trim());
       } else if (kind === "metric") {
         const n = Number(metric);
         if (metric.trim() === "" || !Number.isFinite(n))
-          throw new Error("Enter the measured value as a number.");
+          throw new AppError("Enter the measured value as a number.");
         await addMetricEvidence(base, n, body.trim());
       } else {
-        if (!file) throw new Error("Choose a file to upload.");
+        if (!file) throw new AppError("Choose a file to upload.");
         await addFileEvidence(base, file);
       }
     },

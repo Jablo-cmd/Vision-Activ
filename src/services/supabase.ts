@@ -38,35 +38,37 @@ export function unwrap<T>(res: Result<T>): T {
   return res.data as T;
 }
 
-/** Postgres errors raised by our own functions are already written for people; map the generic ones. */
+const GENERIC = "Something went wrong. Please try again.";
+const OFFLINE = "We could not reach the server. Check your connection and try again.";
+
+/**
+ * Our database functions raise errors written for people, with these codes. Everything else
+ * (missing columns, syntax, PostgREST internals) is an implementation detail and never shown.
+ */
+const AUTHORED_CODES = new Set(["42501", "22023", "55000", "23503", "23505", "23514", "P0001"]);
+
 export function friendlyMessage(error: { message: string; code?: string }): string {
-  switch (error.code) {
-    case "42501":
-      return error.message.includes("row-level security") ||
-        error.message.includes("permission denied")
-        ? "You do not have permission to do that."
-        : error.message;
-    case "23505":
-      return error.message.includes("duplicate key") ? "That already exists." : error.message;
-    case "23503":
-      return error.message.includes("violates foreign key")
-        ? "A related record was not found."
-        : error.message;
-    case "23514":
-      return error.message.includes("violates check constraint")
-        ? "Those values are not allowed. Please review the form."
-        : error.message;
-    case "PGRST301":
-    case "PGRST303":
-      return "Your session has expired. Please sign in again.";
-    default:
-      return error.message || "Something went wrong. Please try again.";
-  }
+  const { code, message } = error;
+  if (code === "PGRST301" || code === "PGRST303" || /jwt expired/i.test(message))
+    return "Your session has expired. Please sign in again.";
+  if (!code && /failed to fetch|networkerror|load failed|network request failed/i.test(message))
+    return OFFLINE;
+  if (!code || !AUTHORED_CODES.has(code)) return GENERIC;
+  if (code === "42501" && /row-level security|permission denied/i.test(message))
+    return "You do not have permission to do that.";
+  if (code === "23505" && /duplicate key/i.test(message)) return "That already exists.";
+  if (code === "23503" && /violates foreign key/i.test(message))
+    return "A related record was not found.";
+  if (code === "23514" && /violates check constraint/i.test(message))
+    return "Those values are not allowed. Please review the form.";
+  if (/violates|constraint|relation|column|function/i.test(message) && code !== "P0001")
+    return GENERIC;
+  return message || GENERIC;
 }
 
-export function errorText(
-  e: unknown,
-  fallback = "Something went wrong. Please try again.",
-): string {
-  return e instanceof Error && e.message ? e.message : fallback;
+export function errorText(e: unknown, fallback = GENERIC): string {
+  if (e instanceof AppError) return e.message || fallback;
+  // Anything else (network failures, SDK errors) is mapped, never echoed raw.
+  if (e instanceof Error) return friendlyMessage({ message: e.message }) || fallback;
+  return fallback;
 }

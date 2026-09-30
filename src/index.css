@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 /*
- * Vision Activ design tokens: deep navy and white (site palette could not be fetched; edit these tokens to match brand guide).
+ * Vision Activ design tokens: friendly corporate blue on white, navy for text and emphasis (edit these tokens to match a brand guide).
  * Every text/background pairing used by the components meets WCAG AA (4.5:1):
- *   brand-600 on white >10, white on brand-700 >13, white on brand-800 >15,
+ *   brand-600 on white 7.8, white on brand-700 10.3, white on brand-800 12.9,
  *   ink-700 on canvas 7.9, ink-500 on white 7.6.
  */
 @theme {
@@ -12,15 +12,15 @@
 
   --font-display: "Fraunces Variable", Georgia, "Times New Roman", serif;
 
-  --color-brand-50: #f2f6fc;
-  --color-brand-100: #e2eaf7;
-  --color-brand-200: #c5d4ee;
-  --color-brand-300: #93abd8;
-  --color-brand-500: #3f63b0;
-  --color-brand-600: #17357a;
-  --color-brand-700: #112a63;
-  --color-brand-800: #0b1e4a;
-  --color-brand-900: #071431;
+  --color-brand-50: #f3f7fd;
+  --color-brand-100: #e4ecfa;
+  --color-brand-200: #c9d7f2;
+  --color-brand-300: #9db6e6;
+  --color-brand-500: #3b6fd4;
+  --color-brand-600: #1f4fb8;
+  --color-brand-700: #173d92;
+  --color-brand-800: #102f74;
+  --color-brand-900: #0a2052;
 
   --color-canvas: #f6f8fc;
   --color-line: #dde5f1;

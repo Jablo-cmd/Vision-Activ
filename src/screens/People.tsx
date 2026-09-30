@@ -164,6 +164,13 @@ function Row({
       <Td>
         <p className="font-semibold text-ink-900">{displayName(p)}</p>
         <p className="text-xs text-ink-500">{p.email}</p>
+        {p.role && locked && (
+          <p className="mt-1 text-xs text-ink-500">
+            {isSelf
+              ? "You cannot change your own role or status."
+              : "Only an administrator can change this membership."}
+          </p>
+        )}
         {error && (
           <p role="alert" className="mt-1 text-xs font-medium text-bad-700">
             {error}

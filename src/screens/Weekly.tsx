@@ -9,6 +9,7 @@ import {
   Field,
   Input,
   PageHeader,
+  VisibilityNote,
   Spinner,
   Textarea,
 } from "../components/ui";
@@ -152,6 +153,10 @@ export function Weekly() {
           )
         }
       />
+
+      <VisibilityNote>
+        Visible to you, your manager and the executives. It is never shown to your peers.
+      </VisibilityNote>
 
       {closed && (
         <Alert tone="warning">

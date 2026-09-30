@@ -8,6 +8,7 @@ import {
   Card,
   EmptyState,
   PageHeader,
+  VisibilityNote,
   Spinner,
   Textarea,
   Field,
@@ -108,6 +109,9 @@ export function Baseline() {
         title="Baseline assessment"
         subtitle="Rate yourself honestly on all 12 dimensions (1 = significant development needed, 5 = role model). This is submitted once and becomes your starting point."
       />
+      <VisibilityNote>
+        Visible to you, your manager and the executives. It is never shown to your peers.
+      </VisibilityNote>
       {(formError || submit.isError) && (
         <Alert tone="error">{formError || errorText(submit.error)}</Alert>
       )}

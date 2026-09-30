@@ -8,7 +8,7 @@ import {
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
 } from "react";
-import { AlertTriangle, CheckCircle2, Info, Loader2, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Info, Loader2, Lock, XCircle } from "lucide-react";
 
 const cx = (...parts: (string | false | null | undefined)[]) => parts.filter(Boolean).join(" ");
 
@@ -87,8 +87,8 @@ export function PageHeader({
 }) {
   return (
     <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <h1 className="text-3xl text-ink-900 md:text-[2.5rem]">{title}</h1>
+      <div className="min-w-0">
+        <h1 className="text-3xl text-ink-900 [overflow-wrap:anywhere] md:text-[2.5rem]">{title}</h1>
         {subtitle && <p className="mt-1 max-w-3xl text-sm text-ink-500 md:text-base">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -334,7 +334,7 @@ export const Textarea = forwardRef<
 export function TableWrap({ children, label }: { children: ReactNode; label: string }) {
   return (
     <div
-      className="overflow-x-auto rounded-xl border border-line bg-white shadow-card"
+      className="relative overflow-x-auto rounded-xl border border-line bg-white shadow-card"
       role="region"
       aria-label={label}
       tabIndex={0}
@@ -374,3 +374,13 @@ export const Td = ({
 );
 
 export { cx };
+
+/** States who can see the information on a screen, so nobody is surprised by who reads it. */
+export function VisibilityNote({ children }: { children: ReactNode }) {
+  return (
+    <p className="flex items-start gap-2 text-sm text-ink-500">
+      <Lock size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+      <span>{children}</span>
+    </p>
+  );
+}

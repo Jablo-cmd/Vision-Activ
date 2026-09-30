@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, ArrowRight, CheckCircle2, ClipboardCheck } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
 import { CommitmentCard } from "../components/CommitmentCard";
+import { LoopStrip, type LoopStage } from "../components/LoopStrip";
 import { DeltaChip, ScoreValue, dimensionName } from "../components/domain";
 import {
   Alert,
@@ -125,6 +126,59 @@ export function Dashboard() {
   const withOpen = new Set(open.map((c) => c.dimension_id));
   const focus = weakestDimensions(latest, 3).filter((f) => f.score <= 3);
   const unread = notifications.data?.filter((n) => !n.read_at) ?? [];
+  const verified = list.filter((c) => c.verification_status === "verified").length;
+  const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
+  const stages: LoopStage[] = [
+    {
+      key: "assess",
+      label: "Assess",
+      to: baseline ? "/weekly" : "/baseline",
+      note: !baseline
+        ? "Baseline not done"
+        : submittedThisWeek
+          ? "Scorecard submitted this week"
+          : "Scorecard due this week",
+      attention: !baseline || !submittedThisWeek,
+    },
+    {
+      key: "commit",
+      label: "Commit",
+      to: "/commitments",
+      note: focus.some((f) => !withOpen.has(f.dimensionId))
+        ? "Weak areas without a commitment"
+        : plural(open.length, "open commitment"),
+      attention: focus.some((f) => !withOpen.has(f.dimensionId)),
+    },
+    {
+      key: "track",
+      label: "Track",
+      to: "/track",
+      note: plural(open.length, "action") + " in flight",
+    },
+    {
+      key: "act",
+      label: "Act",
+      to: "/commitments",
+      note:
+        blocked.length || overdue.length
+          ? `${blocked.length} blocked, ${overdue.length} overdue`
+          : "Nothing blocked or overdue",
+      attention: blocked.length + overdue.length > 0,
+    },
+    {
+      key: "verify",
+      label: "Verify",
+      to: "/commitments",
+      note: awaiting.length ? `${awaiting.length} awaiting your manager` : "Nothing waiting",
+    },
+    { key: "review", label: "Review", to: "/review", note: "Conversations with your manager" },
+    {
+      key: "improve",
+      label: "Improve",
+      to: "/trends",
+      note: verified ? `${plural(verified, "verified result")}` : "Verified results appear here",
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -146,6 +200,8 @@ export function Dashboard() {
           so your progress has a starting point.
         </Alert>
       )}
+
+      <LoopStrip stages={stages} />
 
       <Card className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">

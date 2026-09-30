@@ -11,7 +11,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Session, User } from "@supabase/supabase-js";
 import type { Membership, Role } from "../domain";
 import { fetchMembership } from "../services/assessments";
-import { isConfigured, supabase } from "../services/supabase";
+import { isConfigured, supabase, AppError } from "../services/supabase";
 
 export type AuthStatus =
   "unconfigured" | "loading" | "signed_out" | "no_access" | "error" | "ready";
@@ -85,11 +85,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   else status = "ready";
 
   const signIn = useCallback(async (email: string, password: string) => {
-    if (!supabase) throw new Error("The application is not configured.");
+    if (!supabase) throw new AppError("The application is not configured.");
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     if (error) {
       // Do not reveal whether the account exists.
-      throw new Error(
+      throw new AppError(
         error.status === 400
           ? "The email or password is incorrect."
           : "Sign-in failed. Please try again.",
@@ -102,18 +102,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const requestPasswordReset = useCallback(async (email: string) => {
-    if (!supabase) throw new Error("The application is not configured.");
+    if (!supabase) throw new AppError("The application is not configured.");
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
       redirectTo: `${window.location.origin}/reset-password`,
     });
     if (error && error.status !== 400)
-      throw new Error("The reset email could not be sent. Please try again.");
+      throw new AppError("The reset email could not be sent. Please try again.");
   }, []);
 
   const updatePassword = useCallback(async (password: string) => {
-    if (!supabase) throw new Error("The application is not configured.");
+    if (!supabase) throw new AppError("The application is not configured.");
     const { error } = await supabase.auth.updateUser({ password });
-    if (error) throw new Error(error.message);
+    if (error) throw new AppError(error.message);
     setRecovery(false);
   }, []);
 

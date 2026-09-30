@@ -15,12 +15,22 @@ function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="grid min-h-screen place-items-center bg-gradient-to-br from-brand-900 via-brand-800 to-brand-600 p-5">
-      <Card className="w-full max-w-md p-8">
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-700">Vision Activ</p>
+    <div className="relative grid min-h-screen place-items-center overflow-hidden bg-canvas p-5">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-brand-100/80 to-transparent"
+      />
+      <Card className="relative w-full max-w-md p-6 sm:p-8">
+        <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-brand-700">
+          <span aria-hidden="true" className="h-2.5 w-2.5 rounded-sm bg-brand-600" />
+          Vision Activ
+        </p>
         <h1 className="mt-2 text-3xl text-ink-900">{title}</h1>
         <p className="mt-1 text-sm text-ink-500">{subtitle}</p>
         <div className="mt-6">{children}</div>
+        <p className="mt-6 border-t border-line pt-4 text-center text-xs text-ink-500">
+          Assess · Commit · Track · Act · Verify · Review · Improve
+        </p>
       </Card>
     </div>
   );

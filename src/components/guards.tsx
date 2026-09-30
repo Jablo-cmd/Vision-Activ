@@ -15,7 +15,7 @@ export function ConfigError() {
   return (
     <FullScreen>
       <Card className="max-w-md p-8 text-center">
-        <h1 className="text-xl font-bold text-ink-900">Configuration required</h1>
+        <h1 className="text-2xl text-ink-900">Configuration required</h1>
         <p className="mt-2 text-sm text-ink-500">
           This deployment is missing its Supabase configuration. An administrator needs to set
           <code className="mx-1 rounded bg-brand-50 px-1">VITE_SUPABASE_URL</code> and
@@ -32,7 +32,7 @@ export function AwaitingAccess() {
   return (
     <FullScreen>
       <Card className="max-w-md p-8 text-center">
-        <h1 className="text-xl font-bold text-ink-900">Your account is not active yet</h1>
+        <h1 className="text-2xl text-ink-900">Your account is not active yet</h1>
         <p className="mt-2 text-sm text-ink-500">
           You are signed in as <strong>{user?.email}</strong>, but you have not been added to the
           Vision Activ workspace. Ask your administrator or CEO to grant you access, then sign in
@@ -51,7 +51,7 @@ function LoadFailed() {
   return (
     <FullScreen>
       <Card className="max-w-md p-8 text-center">
-        <h1 className="text-xl font-bold text-ink-900">We could not load your workspace</h1>
+        <h1 className="text-2xl text-ink-900">We could not load your workspace</h1>
         <p className="mt-2 text-sm text-ink-500">
           Check your connection and try again. Your data has not been changed.
         </p>
@@ -94,7 +94,7 @@ export function Forbidden() {
   useDocumentTitle("Not permitted");
   return (
     <Card className="mx-auto mt-10 max-w-lg p-8 text-center">
-      <h1 className="text-xl font-bold text-ink-900">You do not have access to this page</h1>
+      <h1 className="text-2xl text-ink-900">You do not have access to this page</h1>
       <p className="mt-2 text-sm text-ink-500">
         Your role does not include this area. Access is also enforced by the database.
       </p>
@@ -122,16 +122,24 @@ export function PublicOnly({ children }: { children: React.ReactNode }) {
 }
 
 export function NotFound() {
+  const { status } = useAuth();
   useDocumentTitle("Page not found");
-  return (
-    <FullScreen>
-      <Card className="max-w-md p-8 text-center">
-        <h1 className="text-xl font-bold text-ink-900">Page not found</h1>
-        <p className="mt-2 text-sm text-ink-500">The page you are looking for does not exist.</p>
-        <Link className="mt-5 inline-block font-semibold text-brand-700 underline" to="/">
-          Go to the dashboard
-        </Link>
-      </Card>
-    </FullScreen>
+  const card = (
+    <Card className="mx-auto max-w-md p-8 text-center">
+      <h1 className="text-2xl text-ink-900">Page not found</h1>
+      <p className="mt-2 text-sm text-ink-500">
+        The page you are looking for does not exist, or the link is out of date.
+      </p>
+      <Link className="mt-5 inline-block font-semibold text-brand-700 underline" to="/">
+        {status === "ready" ? "Go to your dashboard" : "Go to sign in"}
+      </Link>
+    </Card>
+  );
+  return status === "ready" ? (
+    <Shell>
+      <div className="pt-10">{card}</div>
+    </Shell>
+  ) : (
+    <FullScreen>{card}</FullScreen>
   );
 }

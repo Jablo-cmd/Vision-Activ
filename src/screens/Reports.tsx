@@ -125,7 +125,7 @@ export function Reports() {
         title="Reports"
         subtitle={`${label} consolidation: ${formatDate(view.cur.start)} to ${formatDate(view.cur.end)}, compared with the previous ${view.cur.weeks} week(s).`}
         actions={
-          <div className="no-print flex gap-2">
+          <div className="no-print flex flex-wrap gap-2">
             <Button variant="secondary" onClick={() => window.print()}>
               <Printer size={16} aria-hidden="true" /> Print
             </Button>

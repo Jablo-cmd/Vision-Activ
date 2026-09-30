@@ -14,6 +14,7 @@ import {
   dimensionName,
 } from "../components/domain";
 import {
+  VisibilityNote,
   Alert,
   Button,
   Card,
@@ -570,6 +571,12 @@ export function CommitmentDetail() {
         <OwnerControls key={c.updated_at} c={c} message={flash} setMessage={setFlash} />
       )}
       {canManage && <VerificationPanel key={c.updated_at} c={c} />}
+
+      <VisibilityNote>
+        Evidence and progress updates are visible to the owner, their reporting line, the CEO and
+        administrators.
+        {locked && " Nothing can be added now that this commitment is verified."}
+      </VisibilityNote>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <EvidencePanel

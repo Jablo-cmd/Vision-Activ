@@ -9,9 +9,12 @@ import { useProfileName } from "../hooks/useProfileName";
 
 function Brand() {
   return (
-    <div className="border-b border-white/15 px-5 py-5">
-      <div className="text-xs font-bold tracking-[0.2em] text-brand-100">VISION ACTIV</div>
-      <div className="mt-1 text-base font-semibold leading-tight text-white">
+    <div className="border-b border-line px-5 py-5">
+      <div className="flex items-center gap-2 text-xs font-bold tracking-[0.2em] text-brand-700">
+        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-sm bg-brand-600" />
+        VISION ACTIV
+      </div>
+      <div className="mt-1 text-sm font-medium leading-tight text-ink-500">
         High-Performance Operating Framework
       </div>
     </div>
@@ -24,7 +27,7 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
     <nav aria-label="Main" className="flex-1 space-y-5 overflow-y-auto p-3">
       {navFor(role).map((group) => (
         <div key={group.title}>
-          <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-brand-200">
+          <p className="px-3 pb-1 text-xs font-semibold uppercase tracking-wider text-ink-500">
             {group.title}
           </p>
           <ul className="space-y-0.5">
@@ -36,7 +39,9 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
                   onClick={onNavigate}
                   className={({ isActive }) =>
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium " +
-                    (isActive ? "bg-white text-brand-800" : "text-brand-50 hover:bg-white/10")
+                    (isActive
+                      ? "bg-brand-50 font-semibold text-brand-800 shadow-[inset_3px_0_0_var(--color-brand-600)]"
+                      : "text-ink-700 hover:bg-brand-50/70")
                   }
                 >
                   <item.icon size={18} aria-hidden="true" />
@@ -84,13 +89,13 @@ export function Shell({ children }: { children: ReactNode }) {
       </a>
 
       <aside
-        className="no-print hidden w-64 shrink-0 flex-col bg-gradient-to-b from-brand-900 to-brand-800 lg:flex"
+        className="no-print hidden w-64 shrink-0 flex-col border-r border-line bg-white lg:flex"
         aria-label="Sidebar"
       >
         <div className="sticky top-0 flex h-screen flex-col">
           <Brand />
           <NavList />
-          <p className="border-t border-white/15 px-5 py-3 text-xs text-brand-100">
+          <p className="border-t border-line px-5 py-3 text-xs text-ink-500">
             Signed in as {role ? ROLE_LABEL[role] : ""}
           </p>
         </div>
@@ -107,17 +112,17 @@ export function Shell({ children }: { children: ReactNode }) {
             type="button"
             aria-label="Close navigation"
             tabIndex={-1}
-            className="absolute inset-0 bg-slate-900/50"
+            className="absolute inset-0 bg-brand-900/40"
             onClick={() => setOpen(false)}
           />
-          <div className="relative flex h-full w-72 max-w-[85vw] flex-col bg-gradient-to-b from-brand-900 to-brand-800">
+          <div className="relative flex h-full w-72 max-w-[85vw] flex-col bg-white shadow-xl">
             <div className="flex justify-end p-2">
               <button
                 ref={closeRef}
                 type="button"
                 aria-label="Close navigation"
                 onClick={() => setOpen(false)}
-                className="rounded-lg p-2 text-white hover:bg-white/10"
+                className="rounded-lg p-2 text-ink-700 hover:bg-brand-50"
               >
                 <X size={22} aria-hidden="true" />
               </button>
@@ -158,6 +163,9 @@ export function Shell({ children }: { children: ReactNode }) {
         <main id="main" tabIndex={-1} className="mx-auto w-full max-w-7xl flex-1 p-4 md:p-8">
           {children}
         </main>
+        <footer className="no-print border-t border-line px-4 py-4 text-xs text-ink-500 md:px-8">
+          Vision Activ · High-Performance Operating Framework
+        </footer>
       </div>
     </div>
   );

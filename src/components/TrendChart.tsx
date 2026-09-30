@@ -50,9 +50,9 @@ export function TrendChart({
             <Line
               type="monotone"
               dataKey="score"
-              stroke="#17357a"
+              stroke="#1f4fb8"
               strokeWidth={3}
-              dot={{ r: 4, fill: "#17357a" }}
+              dot={{ r: 4, fill: "#1f4fb8" }}
               activeDot={{ r: 6 }}
               isAnimationActive={false}
             />
