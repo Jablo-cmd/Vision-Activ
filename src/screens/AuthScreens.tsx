@@ -15,11 +15,7 @@ function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative grid min-h-screen place-items-center overflow-hidden bg-canvas p-5">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-brand-100/80 to-transparent"
-      />
+    <div className="relative grid min-h-screen place-items-center overflow-hidden bg-gradient-to-br from-brand-900 via-brand-800 to-brand-700 p-5">
       <Card className="relative w-full max-w-md p-6 sm:p-8">
         <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-brand-700">
           <span aria-hidden="true" className="h-2.5 w-2.5 rounded-sm bg-brand-600" />

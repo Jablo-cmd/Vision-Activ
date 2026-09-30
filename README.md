@@ -110,7 +110,7 @@ Do not edit an applied migration; add a new one. See [`docs/OPERATIONS.md`](docs
 
 ## Design system
 
-Friendly corporate blue on white, navy for text and emphasis, Fraunces for titles and headline figures, Inter for everything functional
+Deep navy and white: a navy sidebar and sign-in panel, white cards, navy buttons and headings, Fraunces for titles and headline figures, Inter for everything functional
 (both bundled, no third-party font requests). The operating loop (Assess → Improve) is shown on the employee dashboard with real status
 per stage. Tokens live in `src/index.css`; the palette is a placeholder until the brand guide's exact values are supplied; every text/background pairing meets WCAG AA (axe verifies it in CI).
 Colour is never the only signal: scores, deltas and statuses always carry text.

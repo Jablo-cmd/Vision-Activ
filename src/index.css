@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 /*
- * Vision Activ design tokens: friendly corporate blue on white, navy for text and emphasis (edit these tokens to match a brand guide).
+ * Vision Activ design tokens: deep navy and white (edit these tokens to match a brand guide).
  * Every text/background pairing used by the components meets WCAG AA (4.5:1):
- *   brand-600 on white 7.8, white on brand-700 10.3, white on brand-800 12.9,
+ *   brand-600 on white 12.6, white on brand-700 14.9, white on brand-800 17.9, brand-300 on brand-800 7.2,
  *   ink-700 on canvas 7.9, ink-500 on white 7.6.
  */
 @theme {
@@ -12,17 +12,17 @@
 
   --font-display: "Fraunces Variable", Georgia, "Times New Roman", serif;
 
-  --color-brand-50: #f3f7fd;
-  --color-brand-100: #e4ecfa;
-  --color-brand-200: #c9d7f2;
-  --color-brand-300: #9db6e6;
-  --color-brand-500: #3b6fd4;
-  --color-brand-600: #1f4fb8;
-  --color-brand-700: #173d92;
-  --color-brand-800: #102f74;
-  --color-brand-900: #0a2052;
+  --color-brand-50: #f2f5fb;
+  --color-brand-100: #e3e9f5;
+  --color-brand-200: #c7d3ea;
+  --color-brand-300: #94a8d2;
+  --color-brand-500: #3556a8;
+  --color-brand-600: #14306f;
+  --color-brand-700: #0f2557;
+  --color-brand-800: #0a1a3f;
+  --color-brand-900: #06122d;
 
-  --color-canvas: #f6f8fc;
+  --color-canvas: #f5f7fb;
   --color-line: #dde5f1;
   --color-ink-900: #0b1530;
   --color-ink-700: #2c3a56;
@@ -79,6 +79,11 @@ select {
 :focus-visible {
   outline: 3px solid var(--color-brand-500);
   outline-offset: 2px;
+}
+
+/* On the navy sidebar and sign-in panel the ring must be light to stay visible. */
+.on-navy :focus-visible {
+  outline-color: #ffffff;
 }
 
 @media (prefers-reduced-motion: reduce) {
