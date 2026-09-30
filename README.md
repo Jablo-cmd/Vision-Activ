@@ -87,6 +87,11 @@ Docker is required for the local stack. If your Playwright browser build differs
   any horizontal overflow or clipped element at 320, 360, 375, 390, 414, 768, 1024, 1280 and 1680px for every role.
 * **Vitest** covers the pure calculation library at 100% of lines and functions, and re-runs under other time zones.
 
+## Demonstration environment
+
+See [docs/DEMO.md](docs/DEMO.md): a fictional nine-week company (CEO, 3 managers, 12 employees) loaded through the real tables,
+with an integrity check, an idempotency proof and role-based end-to-end verification in CI.
+
 ## CI/CD
 
 `.github/workflows/ci.yml` — one pipeline: **quality** (prettier, ESLint, tsc, unit tests + coverage, build) ·
