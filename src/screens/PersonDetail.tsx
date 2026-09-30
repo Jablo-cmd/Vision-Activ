@@ -218,9 +218,12 @@ export function PersonDetail() {
           <ul className="mt-3 space-y-3">
             {theirReviews.map((r) => (
               <li key={r.id} className="rounded-lg border border-line p-3 text-sm">
-                <p className="text-xs text-ink-500">
-                  {formatDate(r.reviewed_at.slice(0, 10))} · by{" "}
-                  {nameOf(directory.data, r.reviewer_id)}
+                <p className="flex flex-wrap items-center gap-2 text-xs text-ink-500">
+                  {r.status === "scheduled" && <Badge tone="brand">Scheduled</Badge>}
+                  <span>
+                    {formatDate(r.reviewed_at.slice(0, 10))} · by{" "}
+                    {nameOf(directory.data, r.reviewer_id)}
+                  </span>
                 </p>
                 <p className="mt-1 whitespace-pre-wrap text-ink-700">{r.notes}</p>
               </li>

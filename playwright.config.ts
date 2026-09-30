@@ -2,6 +2,8 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
+  // The populated-demo checks have their own config (playwright.demo.config.ts) and never reset data.
+  testIgnore: "**/demo/**",
   globalSetup: "./e2e/global-setup.ts",
   timeout: 45_000,
   expect: { timeout: 10_000 },
@@ -25,7 +27,7 @@ export default defineConfig({
   projects: [
     {
       name: "desktop",
-      testIgnore: /05-mobile\.spec\.ts/,
+      testIgnore: [/05-mobile\.spec\.ts/, /[\\/]demo[\\/]/],
       use: { ...devices["Desktop Chrome"], viewport: { width: 1360, height: 900 } },
     },
     {

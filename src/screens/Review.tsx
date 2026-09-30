@@ -9,6 +9,7 @@ import {
   EmptyState,
   Field,
   Input,
+  Badge,
   PageHeader,
   SectionTitle,
   Select,
@@ -284,14 +285,21 @@ function History() {
       {q.data.map((r) => (
         <li key={r.id}>
           <Card className="p-4">
-            <p className="text-sm text-ink-500">
-              {formatDate(r.reviewed_at.slice(0, 10))} ·{" "}
-              {r.subject_user_id === user?.id
-                ? "About you"
-                : `About ${nameOf(directory.data, r.subject_user_id)}`}{" "}
-              · by {r.reviewer_id === user?.id ? "you" : nameOf(directory.data, r.reviewer_id)}
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-ink-500">
+              {r.status === "scheduled" && <Badge tone="brand">Scheduled</Badge>}
+              {r.status === "cancelled" && <Badge tone="neutral">Cancelled</Badge>}
+              <span>
+                {formatDate(r.reviewed_at.slice(0, 10))} ·{" "}
+                {r.subject_user_id === user?.id
+                  ? "About you"
+                  : `About ${nameOf(directory.data, r.subject_user_id)}`}{" "}
+                · by {r.reviewer_id === user?.id ? "you" : nameOf(directory.data, r.reviewer_id)}
+              </span>
             </p>
-            <p className="mt-2 whitespace-pre-wrap text-ink-900">{r.notes}</p>
+            <p className="mt-2 whitespace-pre-wrap text-ink-900">
+              {r.status === "scheduled" && r.notes ? <strong>Agenda: </strong> : null}
+              {r.notes.replace(/^Agenda: /, "")}
+            </p>
             {r.barriers && (
               <p className="mt-2 text-sm text-ink-700">
                 <strong>Barriers:</strong> {r.barriers}
